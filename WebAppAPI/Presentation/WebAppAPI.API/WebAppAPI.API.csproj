@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>422ca274-e5a7-46c0-b26f-f5cf760027ba</UserSecretsId>
+    <UserSecretsId>web-app-cloud-api-dev</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
