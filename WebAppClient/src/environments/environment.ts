@@ -1,8 +1,8 @@
 export const environment = {
     production: false,
-    allowedDomains: ["localhost:7198"],
-    baseUrl: "https://localhost:7198/api",
-    baseSignalRUrl: "https://localhost:7198/",
+    allowedDomains: ["localhost:5198"],
+    baseUrl: "http://localhost:5198/api",
+    baseSignalRUrl: "http://localhost:5198/",
     googleClientId: "",
     facebookClientId: ""
 };

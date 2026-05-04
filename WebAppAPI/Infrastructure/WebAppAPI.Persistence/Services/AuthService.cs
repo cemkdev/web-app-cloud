@@ -26,6 +26,7 @@ namespace WebAppAPI.Persistence.Services
         readonly IMailService _mailService;
         IHttpContextAccessor _httpContextAccessor;
         readonly IRoleService _roleService;
+        readonly bool _authCookieSecure;
 
         private readonly int refreshTokenExpirationTime;
 
@@ -51,6 +52,8 @@ namespace WebAppAPI.Persistence.Services
 
             refreshTokenExpirationTime = Convert.ToInt32(_configuration["TokenExpirations:RefreshToken"]);
             _roleService = roleService;
+
+            _authCookieSecure = _configuration.GetValue<bool>("AuthCookie:Secure");
         }
 
         #region Internal Login
@@ -263,7 +266,7 @@ namespace WebAppAPI.Persistence.Services
             _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = _authCookieSecure,
                 SameSite = SameSiteMode.Strict,
                 Path = "/"
             });
@@ -341,7 +344,7 @@ namespace WebAppAPI.Persistence.Services
             _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token.AccessToken, new CookieOptions
             {
                 HttpOnly = true, // Prevents JavaScript access.
-                Secure = true, // It's only sent over HTTPS.
+                Secure = _authCookieSecure, // If true, the cookie will only be sent over HTTPS.
                 Expires = token.Expiration, // Token's expiration time.
                 SameSite = SameSiteMode.Strict, // To prevent CSRF.
                 Path = "/" // It's only valid for the relevant path.

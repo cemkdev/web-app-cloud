@@ -19,6 +19,16 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "WebAppAPI.API.Http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5198",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
