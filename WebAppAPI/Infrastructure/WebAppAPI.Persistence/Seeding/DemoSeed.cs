@@ -20,7 +20,7 @@ namespace WebAppAPI.Persistence.Seeding
             }
             catch
             {
-
+                Console.WriteLine("Database schema is not ready. Applying migrations and seeding demo data...");
             }
 
             await SeedAllAsync(services);
