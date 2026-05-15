@@ -3,6 +3,7 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Context;
@@ -14,6 +15,8 @@ using WebAppAPI.API.Configurations.ColumnWriters;
 using WebAppAPI.API.Extensions;
 using WebAppAPI.API.Filters;
 using WebAppAPI.API.Middlewares;
+using WebAppAPI.API.Options.Observability;
+using WebAppAPI.API.Options.Observability.Validation;
 using WebAppAPI.Application;
 using WebAppAPI.Application.Validators.Products;
 using WebAppAPI.Domain.Constants;
@@ -71,6 +74,13 @@ var allowedOrigin = builder.Configuration["AngularClientUrl"] ?? throw new Inval
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins(allowedOrigin).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
 ));
+
+builder.Services
+    .AddOptions<ObservabilityOptions>()
+    .Bind(builder.Configuration.GetSection(ObservabilityOptions.SectionName));
+//.ValidateOnStart();
+
+builder.Services.AddSingleton<IValidateOptions<ObservabilityOptions>, ObservabilityOptionsValidator>();
 
 Logger log = new LoggerConfiguration()
     .WriteTo.Console()

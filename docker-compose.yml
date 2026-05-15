@@ -3,14 +3,93 @@ services:
     container_name: container_postgres
     image: postgres:17
     restart: always
+    profiles:
+      - light-observability
+      - full-observability
     ports:
-      - 5432:5432
+      - "5432:5432"
     environment:
-      - POSTGRES_USER=postgrewebapp
-      - POSTGRES_PASSWORD=123456Aa.
-      - POSTGRES_DB=WebAppCloudAPIDb
+      POSTGRES_USER: postgrewebapp
+      POSTGRES_PASSWORD: 123456Aa.
+      POSTGRES_DB: WebAppCloudAPIDb
     volumes:
       - webapp-volume:/var/lib/postgresql/data
 
+  seq:
+    container_name: container_seq
+    image: datalust/seq:2025.2
+    restart: unless-stopped
+    profiles:
+      - light-observability
+    ports:
+      - "5341:80"
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    volumes:
+      - webapp-seq-volume:/data
+
+  elasticsearch:
+    container_name: container_elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.0
+    restart: unless-stopped
+    profiles:
+      - full-observability
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    volumes:
+      - webapp-elasticsearch-volume:/usr/share/elasticsearch/data
+
+  kibana:
+    container_name: container_kibana
+    image: docker.elastic.co/kibana/kibana:9.4.0
+    restart: unless-stopped
+    profiles:
+      - full-observability
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+
+  prometheus:
+    container_name: container_prometheus
+    image: prom/prometheus:v3.11.3
+    restart: unless-stopped
+    profiles:
+      - full-observability
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - webapp-prometheus-volume:/prometheus
+
+  grafana:
+    container_name: container_grafana
+    image: grafana/grafana:13.0.1-security-01
+    restart: unless-stopped
+    profiles:
+      - full-observability
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - webapp-grafana-volume:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
   webapp-volume:
+  webapp-seq-volume:
+  webapp-elasticsearch-volume:
+  webapp-prometheus-volume:
+  webapp-grafana-volume:
