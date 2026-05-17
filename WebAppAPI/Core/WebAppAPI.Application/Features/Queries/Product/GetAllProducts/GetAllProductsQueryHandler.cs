@@ -8,12 +8,10 @@ namespace WebAppAPI.Application.Features.Queries.Product.GetAllProducts
     public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQueryRequest, GetAllProductsQueryResponse>
     {
         readonly IProductReadRepository _productReadRepository;
-        readonly ILogger<GetAllProductsQueryHandler> _logger;
 
-        public GetAllProductsQueryHandler(IProductReadRepository productReadRepository, ILogger<GetAllProductsQueryHandler> logger)
+        public GetAllProductsQueryHandler(IProductReadRepository productReadRepository)
         {
             _productReadRepository = productReadRepository;
-            _logger = logger;
         }
 
         public async Task<GetAllProductsQueryResponse> Handle(GetAllProductsQueryRequest request, CancellationToken cancellationToken)
