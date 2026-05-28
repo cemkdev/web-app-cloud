@@ -12,14 +12,15 @@ using WebAppAPI.Persistence.Contexts;
 namespace WebAppAPI.Persistence.Migrations
 {
     [DbContext(typeof(WebAppAPIDbContext))]
-    [Migration("20250916220928_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20260528141315_InitialCreate_EfCore10")]
+    partial class InitialCreate_EfCore10
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.36")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -286,7 +287,8 @@ namespace WebAppAPI.Persistence.Migrations
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(21)
+                        .HasColumnType("character varying(21)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -305,6 +307,8 @@ namespace WebAppAPI.Persistence.Migrations
                     b.ToTable("Files");
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("File");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("WebAppAPI.Domain.Entities.Identity.AppRole", b =>
@@ -547,7 +551,6 @@ namespace WebAppAPI.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int?>("PreviousStatusId")
-                        .IsRequired()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -800,8 +803,7 @@ namespace WebAppAPI.Persistence.Migrations
                     b.HasOne("WebAppAPI.Domain.Entities.OrderStatus", "PreviousStatus")
                         .WithMany()
                         .HasForeignKey("PreviousStatusId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("NewStatus");
 

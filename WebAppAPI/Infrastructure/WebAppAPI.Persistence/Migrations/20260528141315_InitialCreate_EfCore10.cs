@@ -4,10 +4,14 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace WebAppAPI.Persistence.Migrations
 {
-    public partial class InitialMigration : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate_EfCore10 : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -81,7 +85,7 @@ namespace WebAppAPI.Persistence.Migrations
                     FileName = table.Column<string>(type: "text", nullable: false),
                     Path = table.Column<string>(type: "text", nullable: false),
                     Storage = table.Column<string>(type: "text", nullable: false),
-                    Discriminator = table.Column<string>(type: "text", nullable: false),
+                    Discriminator = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
                     Price = table.Column<decimal>(type: "numeric", nullable: true),
                     CoverImage = table.Column<bool>(type: "boolean", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -294,7 +298,7 @@ namespace WebAppAPI.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     OrderId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PreviousStatusId = table.Column<int>(type: "integer", nullable: false),
+                    PreviousStatusId = table.Column<int>(type: "integer", nullable: true),
                     NewStatusId = table.Column<int>(type: "integer", nullable: false),
                     ChangedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -559,6 +563,7 @@ namespace WebAppAPI.Persistence.Migrations
                 column: "UserId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
