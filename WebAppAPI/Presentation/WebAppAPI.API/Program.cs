@@ -69,8 +69,7 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 builder.Services
     .AddOptions<ObservabilityOptions>()
-    .Bind(builder.Configuration.GetSection(ObservabilityOptions.SectionName));
-//.ValidateOnStart();
+    .Bind(builder.Configuration.GetSection(ObservabilityOptions.SectionName)).ValidateOnStart();
 
 builder.Services.AddSingleton<IValidateOptions<ObservabilityOptions>, ObservabilityOptionsValidator>();
 
