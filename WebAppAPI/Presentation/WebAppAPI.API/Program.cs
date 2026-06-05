@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using WebAppAPI.API.Extensions;
+using WebAppAPI.API.Extensions.ApplicationBuilder;
 using WebAppAPI.API.Extensions.Observability;
 using WebAppAPI.API.Extensions.ServiceCollection;
-using WebAppAPI.API.Middlewares;
 using WebAppAPI.Domain.Entities.Identity;
 using WebAppAPI.Persistence.Seeding;
-using WebAppAPI.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,28 +31,9 @@ using (var scope = app.Services.CreateScope())
 #endregion
 
 #region Middlewares
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.ConfigureExceptionHandler<Program>(app.Services.GetRequiredService<ILogger<Program>>());
-
-app.UseStaticFiles();
-app.UseCors();
-app.UseHttpsRedirection();
-
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.UseMiddleware<EndpointAdminCheckMiddleware>();
-
-app.UseStatusCodePages();
-
-app.MapControllers();
-app.MapHubs();
+app.UseApiSwagger();
+app.UseApiPipeline<Program>();
+app.MapApiEndpoints();
 #endregion
 
 app.Run();
