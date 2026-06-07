@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using WebAppAPI.Application.Options.Authentication;
 using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Extensions.ServiceCollection
@@ -10,6 +11,11 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
     {
         public static IServiceCollection AddApiAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
+            var tokenOptions = configuration
+                .GetSection(TokenOptions.SectionName)
+                .Get<TokenOptions>()
+                ?? throw new InvalidOperationException($"{TokenOptions.SectionName} configuration is missing.");
+
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateAudience = true,
@@ -17,10 +23,10 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
 
-                ValidAudience = configuration["Token:Audience"],
-                ValidIssuer = configuration["Token:Issuer"],
+                ValidAudience = tokenOptions.Audience,
+                ValidIssuer = tokenOptions.Issuer,
                 IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(configuration["Token:SecurityKey"])),
+                    Encoding.UTF8.GetBytes(tokenOptions.SecurityKey)),
 
                 ClockSkew = TimeSpan.Zero,
 

@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.API.Filters;
+using WebAppAPI.Application.Options.Client;
 using WebAppAPI.Application.Validators.Products;
 using WebAppAPI.Infrastructure.Filters;
 
@@ -10,8 +11,12 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
     {
         public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
         {
-            var allowedOrigin = configuration["AngularClientUrl"]
-                                ?? throw new InvalidOperationException("AngularClientUrl configuration is missing.");
+            var clientOptions = configuration
+                .GetSection(ClientOptions.SectionName)
+                .Get<ClientOptions>()
+                ?? throw new InvalidOperationException($"{ClientOptions.SectionName} configuration is missing.");
+
+            var allowedOrigin = clientOptions.AngularUrl;
 
             services.AddCors(options =>
             {

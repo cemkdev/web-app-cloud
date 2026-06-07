@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using WebAppAPI.Application.Options.Storage;
 
 namespace WebAppAPI.API.Controllers
 {
@@ -6,11 +8,11 @@ namespace WebAppAPI.API.Controllers
     [ApiController]
     public class FilesController : ControllerBase
     {
-        readonly IConfiguration _configuration;
+        readonly BaseStorageOptions _baseStorageOptions;
 
-        public FilesController(IConfiguration configuration)
+        public FilesController(IOptions<BaseStorageOptions> baseStorageOptions)
         {
-            _configuration = configuration;
+            _baseStorageOptions = baseStorageOptions.Value;
         }
 
         [HttpGet("get-base-storage-url")]
@@ -18,7 +20,7 @@ namespace WebAppAPI.API.Controllers
         {
             return Ok(new
             {
-                Url = _configuration["BaseStorageUrl"]
+                Url = _baseStorageOptions.Url
             });
         }
     }

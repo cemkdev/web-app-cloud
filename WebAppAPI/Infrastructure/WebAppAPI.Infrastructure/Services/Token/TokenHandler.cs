@@ -1,23 +1,29 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using WebAppAPI.Application.Abstractions.Token;
-using T = WebAppAPI.Application.DTOs;
+using WebAppAPI.Application.Options.Authentication;
 using I = WebAppAPI.Domain.Entities.Identity;
+using T = WebAppAPI.Application.DTOs;
 
 namespace WebAppAPI.Infrastructure.Services.Token
 {
     public class TokenHandler : ITokenHandler
     {
-        readonly IConfiguration _configuration;
+        private readonly TokenOptions _tokenOptions;
+        private readonly TokenExpirationOptions _tokenExpirationOptions;
         readonly TokenValidationParameters _validationParameters;
 
-        public TokenHandler(IConfiguration configuration, TokenValidationParameters validationParameters)
+        public TokenHandler(
+            IOptions<TokenOptions> tokenOptions,
+            IOptions<TokenExpirationOptions> tokenExpirationOptions,
+            TokenValidationParameters validationParameters)
         {
-            _configuration = configuration;
+            _tokenOptions = tokenOptions.Value;
+            _tokenExpirationOptions = tokenExpirationOptions.Value;
             _validationParameters = validationParameters;
         }
 
@@ -26,12 +32,12 @@ namespace WebAppAPI.Infrastructure.Services.Token
             T.Token token = new();
 
             // We are getting the symmetric key of the Security Key.
-            SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(_configuration["Token:SecurityKey"]));
+            SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(_tokenOptions.SecurityKey));
 
             // We are creating the encrypted identity.
             SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-            int configuredAccessTokenLifetime = Convert.ToInt32(_configuration["TokenExpirations:AccessToken"]);
+            int configuredAccessTokenLifetime = _tokenExpirationOptions.AccessToken;
             //token.Expiration = DateTime.UtcNow.AddSeconds(configuredAccessTokenLifetime);
 
             TimeSpan defaultAccessTokenLifetime = TimeSpan.FromSeconds(configuredAccessTokenLifetime);
@@ -45,18 +51,18 @@ namespace WebAppAPI.Infrastructure.Services.Token
 
                 // Make sure the token lifetime isn't longer than the refresh token lifetime.
                 var finalLifetime = remaining < defaultAccessTokenLifetime ? remaining : defaultAccessTokenLifetime;
-                expiration = DateTime.UtcNow.AddSeconds(finalLifetime.TotalSeconds);
+                expiration = now.AddSeconds(finalLifetime.TotalSeconds);
             }
             else
-                expiration = DateTime.UtcNow.AddSeconds(configuredAccessTokenLifetime);
+                expiration = now.AddSeconds(configuredAccessTokenLifetime);
 
             token.Expiration = expiration;
 
             JwtSecurityToken SecurityToken = new(
-                audience: _configuration["Token:Audience"],
-                issuer: _configuration["Token:Issuer"],
+                audience: _tokenOptions.Audience,
+                issuer: _tokenOptions.Issuer,
                 expires: token.Expiration,
-                notBefore: DateTime.UtcNow,
+                notBefore: now,
                 signingCredentials: signingCredentials,
                 claims: new List<Claim> { new(ClaimTypes.Name, user.UserName) }
                 );
@@ -77,6 +83,7 @@ namespace WebAppAPI.Infrastructure.Services.Token
             return Convert.ToBase64String(number);
         }
 
+        // TODO: Bu method async denmesine rağmen async değilmiş içi. İçinde await yokmuş. Önceki çalışmalarda chat gpt uyardı. Komple code refactor adımlarında bu ve bunun gibi hata sebebi olmayan ama doğru olmayan kullanımlarla ilgilenelim.
         public async Task<ClaimsPrincipal> ValidateAccessTokenAsync(string accessToken)
         {
             var tokenHandler = new JwtSecurityTokenHandler();

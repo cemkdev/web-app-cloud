@@ -1,19 +1,28 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Options.Client;
+using WebAppAPI.Application.Options.Mail;
 using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Infrastructure.Services
 {
     public class MailService : IMailService
     {
-        readonly IConfiguration _configuration;
+        private readonly MailOptions _mailOptions;
+        private readonly EmailDisplayNameOptions _emailDisplayNameOptions;
+        private readonly ClientOptions _clientOptions;
 
-        public MailService(IConfiguration configuration)
+        public MailService(
+            IOptions<MailOptions> mailOptions,
+            IOptions<EmailDisplayNameOptions> emailDisplayNameOptions,
+            IOptions<ClientOptions> clientOptions)
         {
-            _configuration = configuration;
+            _mailOptions = mailOptions.Value;
+            _emailDisplayNameOptions = emailDisplayNameOptions.Value;
+            _clientOptions = clientOptions.Value;
         }
 
         public async Task SendMailAsync(string recipient, string subject, string body, bool isBodyHtml = true)
@@ -23,15 +32,8 @@ namespace WebAppAPI.Infrastructure.Services
 
         public async Task SendMailAsync(string[] recipients, string subject, string body, bool isBodyHtml = true)
         {
-            // if "Mail" property is empty in appsettings.
-            if (string.IsNullOrWhiteSpace(_configuration["Mail:Username"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Password"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Port"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:EnableSsl"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Host"]))
-            {
+            if (!_mailOptions.IsConfigured)
                 return;
-            }
 
             MailMessage mail = new();
             foreach (var recipient in recipients)
@@ -40,22 +42,22 @@ namespace WebAppAPI.Infrastructure.Services
             mail.Body = body;
             mail.IsBodyHtml = isBodyHtml;
 
-            mail.From = new(_configuration["Mail:Username"], $"{_configuration["EMailDisplayNames:AppName"]} Team", System.Text.Encoding.UTF8);
+            mail.From = new(_mailOptions.Username, $"{_emailDisplayNameOptions.AppName} Team", System.Text.Encoding.UTF8);
 
             SmtpClient smtp = new();
-            smtp.Credentials = new NetworkCredential(_configuration["Mail:Username"], _configuration["Mail:Password"]);
-            smtp.Port = Convert.ToInt32(_configuration["Mail:Port"]);
-            smtp.EnableSsl = Convert.ToBoolean(_configuration["Mail:EnableSsl"]);
-            smtp.Host = _configuration["Mail:Host"];
+            smtp.Credentials = new NetworkCredential(_mailOptions.Username, _mailOptions.Password);
+            smtp.Port = _mailOptions.Port!.Value;
+            smtp.EnableSsl = _mailOptions.EnableSsl!.Value;
+            smtp.Host = _mailOptions.Host;
 
             await smtp.SendMailAsync(mail);
         }
 
         public async Task SendPasswordResetMailAsync(string recipient, string userId, string firstName, string resetToken)
         {
-            string appName = _configuration["EMailDisplayNames:AppName"];
-            string subject = _configuration["EMailDisplayNames:PasswordResetSubject"];
-            var resetLink = $"{_configuration["AngularClientUrl"]}/password-update/{userId}/{resetToken}";
+            string appName = _emailDisplayNameOptions.AppName;
+            string subject = _emailDisplayNameOptions.PasswordResetSubject;
+            var resetLink = $"{_clientOptions.AngularUrl}/password-update/{userId}/{resetToken}";
             string emailBody = BuildPasswordResetEmail(firstName, resetLink, appName);
 
             await SendMailAsync(recipient, subject, emailBody);
@@ -63,7 +65,7 @@ namespace WebAppAPI.Infrastructure.Services
 
         public async Task SendOrderStatusUpdateMailAsync(string recipient, string orderCode, OrderStatusEnum newStatus, DateTime statusChangedDate, string firstName)
         {
-            string? defaultSubject = _configuration["EMailDisplayNames:OrderStatusUpdateSubject"];
+            string? defaultSubject = _emailDisplayNameOptions.OrderStatusUpdateSubject;
             string? subject = newStatus switch
             {
                 OrderStatusEnum.Pending => "We've Received Your Order!",
@@ -74,7 +76,7 @@ namespace WebAppAPI.Infrastructure.Services
                 _ => defaultSubject
             };
 
-            string appName = _configuration["EMailDisplayNames:AppName"];
+            string appName = _emailDisplayNameOptions.AppName;
             string emailBody = BuildOrderStatusUpdateEmail(firstName, orderCode, newStatus, statusChangedDate, appName);
 
             await SendMailAsync(recipient, subject, emailBody);

@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
 using E = WebAppAPI.Domain.Entities;
 
@@ -9,12 +10,12 @@ namespace WebAppAPI.Application.Features.Queries.ProductImageFile.GetProductImag
     public class GetProductImagesQueryHandler : IRequestHandler<GetProductImagesQueryRequest, List<GetProductImagesQueryResponse>>
     {
         readonly IProductReadRepository _productReadRepository;
-        readonly IConfiguration _configuration;
+        readonly BaseStorageOptions _baseStorageOptions;
 
-        public GetProductImagesQueryHandler(IProductReadRepository productReadRepository, IConfiguration configuration)
+        public GetProductImagesQueryHandler(IProductReadRepository productReadRepository, IOptions<BaseStorageOptions> baseStorageOptions)
         {
             _productReadRepository = productReadRepository;
-            _configuration = configuration;
+            _baseStorageOptions = baseStorageOptions.Value;
         }
 
         public async Task<List<GetProductImagesQueryResponse>> Handle(GetProductImagesQueryRequest request, CancellationToken cancellationToken)
@@ -27,7 +28,7 @@ namespace WebAppAPI.Application.Features.Queries.ProductImageFile.GetProductImag
             return product?.ProductImageFiles.Where(i => i.Storage == "LocalStorage").Select(p => new GetProductImagesQueryResponse()
             {
                 Id = p.Id,
-                Path = $"{_configuration["BaseStorageUrl"]}/{p.Path}",
+                Path = $"{_baseStorageOptions.Url}/{p.Path}",
                 FileName = p.FileName,
                 CoverImage = p.CoverImage
             }).ToList();

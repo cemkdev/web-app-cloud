@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using WebAppAPI.Application.Features.Commands.AppUser.FacebookLogin;
 using WebAppAPI.Application.Features.Commands.AppUser.GoogleLogin;
 using WebAppAPI.Application.Features.Commands.AppUser.LoginUser;
@@ -9,6 +10,7 @@ using WebAppAPI.Application.Features.Commands.AppUser.PasswordReset;
 using WebAppAPI.Application.Features.Commands.AppUser.RefreshTokenLogin;
 using WebAppAPI.Application.Features.Commands.AppUser.VerifyResetToken;
 using WebAppAPI.Application.Features.Queries.AppUser.IdentityCheck;
+using WebAppAPI.Application.Options.Mail;
 using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Controllers
@@ -18,12 +20,12 @@ namespace WebAppAPI.API.Controllers
     public class AuthController : ControllerBase
     {
         readonly IMediator _mediator;
-        readonly IConfiguration _configuration;
+        private readonly MailOptions _mailOptions;
 
-        public AuthController(IMediator mediator, IConfiguration configuration)
+        public AuthController(IMediator mediator, IOptions<MailOptions> mailOptions)
         {
             _mediator = mediator;
-            _configuration = configuration;
+            _mailOptions = mailOptions.Value;
         }
 
         [HttpGet("identity-check")]
@@ -76,14 +78,8 @@ namespace WebAppAPI.API.Controllers
         [HttpPost("password-reset")]
         public async Task<IActionResult> PasswordReset([FromBody] PasswordResetCommandRequest passwordResetCommandRequest)
         {
-            if (string.IsNullOrWhiteSpace(_configuration["Mail:Username"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Password"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Port"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:EnableSsl"]) ||
-                string.IsNullOrWhiteSpace(_configuration["Mail:Host"]))
-            {
-                return Ok(new { Message = "Mail service disabled if mail settings are empty in appsettings." });
-            }
+            if (!_mailOptions.IsConfigured)
+                return Ok(new { Message = "Mail service is disabled because mail settings are not configured." });
 
             PasswordResetCommandResponse response = await _mediator.Send(passwordResetCommandRequest);
             return Ok(response);

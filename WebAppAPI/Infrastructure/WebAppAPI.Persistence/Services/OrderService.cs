@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.DTOs;
 using WebAppAPI.Application.DTOs.Order;
+using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Enums;
@@ -16,23 +17,23 @@ namespace WebAppAPI.Persistence.Services
         readonly IOrderReadRepository _orderReadRepository;
         readonly IOrderStatusHistoryReadRepository _orderStatusHistoryReadRepository;
         readonly IOrderStatusHistoryWriteRepository _orderStatusHistoryWriteRepository;
-        readonly IConfiguration _configuration;
         readonly IMailService _mailService;
+        readonly BaseStorageOptions _baseStorageOptions;
 
         public OrderService(
             IOrderWriteRepository orderWriteRepository,
             IOrderReadRepository orderReadRepository,
-            IConfiguration configuration,
             IOrderStatusHistoryReadRepository orderStatusHistoryReadRepository,
             IOrderStatusHistoryWriteRepository orderStatusHistoryWriteRepository,
-            IMailService mailService)
+            IMailService mailService,
+            IOptions<BaseStorageOptions> baseStorageOptions)
         {
             _orderWriteRepository = orderWriteRepository;
             _orderReadRepository = orderReadRepository;
-            _configuration = configuration;
             _orderStatusHistoryReadRepository = orderStatusHistoryReadRepository;
             _orderStatusHistoryWriteRepository = orderStatusHistoryWriteRepository;
             _mailService = mailService;
+            _baseStorageOptions = baseStorageOptions.Value;
         }
 
         public async Task<string> CreateOrderAsync(CreateOrder createOrder)
@@ -103,7 +104,7 @@ namespace WebAppAPI.Persistence.Services
                     {
                         ProductImageFileId = pif.Id.ToString(),
                         FileName = pif.FileName,
-                        Path = $"{_configuration["BaseStorageUrl"]}/{pif.Path}"
+                        Path = $"{_baseStorageOptions.Url}/{pif.Path}"
                     }).FirstOrDefault()
                 }).ToList()
             };

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Json;
 using WebAppAPI.Application.Abstractions.Services;
@@ -11,6 +11,7 @@ using WebAppAPI.Application.DTOs;
 using WebAppAPI.Application.DTOs.Facebook;
 using WebAppAPI.Application.Exceptions;
 using WebAppAPI.Application.Helpers;
+using WebAppAPI.Application.Options.Authentication;
 using U = WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
@@ -18,42 +19,41 @@ namespace WebAppAPI.Persistence.Services
     public class AuthService : IAuthService
     {
         readonly HttpClient _httpClient;
-        readonly IConfiguration _configuration;
         readonly UserManager<U.AppUser> _userManager;
         readonly ITokenHandler _tokenHandler;
         readonly SignInManager<U.AppUser> _signInManager;
         readonly IUserService _userService;
         readonly IMailService _mailService;
         IHttpContextAccessor _httpContextAccessor;
-        readonly IRoleService _roleService;
-        readonly bool _authCookieSecure;
-
-        private readonly int refreshTokenExpirationTime;
+        readonly IRoleService _roleService; // TODO: Bu burada kullanılmıyor gözüküyor, rengi şeffaf gri oradan anladım. Gereksiz inject edilmiş olabilir. Buna komple kod refactor adımlarında bakılsın.
+        private readonly TokenExpirationOptions _tokenExpirationOptions;
+        private readonly AuthCookieOptions _authCookieOptions;
+        private readonly ExternalLoginOptions _externalLoginOptions;
 
         public AuthService(
             IHttpClientFactory httpClientFactory,
-            IConfiguration configuration,
             UserManager<U.AppUser> userManager,
             ITokenHandler tokenHandler,
             SignInManager<U.AppUser> signInManager,
             IUserService userService,
             IMailService mailService,
             IHttpContextAccessor httpContextAccessor,
-            IRoleService roleService)
+            IRoleService roleService,
+            IOptions<TokenExpirationOptions> tokenExpirationOptions,
+            IOptions<AuthCookieOptions> authCookieOptions,
+            IOptions<ExternalLoginOptions> externalLoginOptions)
         {
             _httpClient = httpClientFactory.CreateClient();
-            _configuration = configuration;
             _userManager = userManager;
             _tokenHandler = tokenHandler;
             _signInManager = signInManager;
             _userService = userService;
             _mailService = mailService;
             _httpContextAccessor = httpContextAccessor;
-
-            refreshTokenExpirationTime = Convert.ToInt32(_configuration["TokenExpirations:RefreshToken"]);
             _roleService = roleService;
-
-            _authCookieSecure = _configuration.GetValue<bool>("AuthCookie:Secure");
+            _tokenExpirationOptions = tokenExpirationOptions.Value;
+            _authCookieOptions = authCookieOptions.Value;
+            _externalLoginOptions = externalLoginOptions.Value;
         }
 
         #region Internal Login
@@ -76,7 +76,7 @@ namespace WebAppAPI.Persistence.Services
 
                 Token token = _tokenHandler.CreateAccessToken(user);
                 string refreshToken = _tokenHandler.CreateRefreshToken();
-                await _userService.UpdateRefreshTokenAsync(user, refreshToken, refreshTokenExpirationTime);
+                await _userService.UpdateRefreshTokenAsync(user, refreshToken, _tokenExpirationOptions.RefreshToken);
 
                 // We're sending the access token as an HttpOnly cookie.
                 SetHttpOnlyAccessTokenCookie(token);
@@ -98,14 +98,14 @@ namespace WebAppAPI.Persistence.Services
         #region External Login
         public async Task<Token> FacebookLoginAsync(string authToken)
         {
-            // if "ExternalLoginSettings:Facebook" property is empty in appsettings.
-            if (string.IsNullOrWhiteSpace(_configuration["ExternalLoginSettings:Facebook:Client_ID"]) ||
-                string.IsNullOrWhiteSpace(_configuration["ExternalLoginSettings:Facebook:Client_Secret"]))
+            // If Facebook external login settings are not configured, skip external login.
+            if (string.IsNullOrWhiteSpace(_externalLoginOptions.Facebook.ClientId) ||
+                string.IsNullOrWhiteSpace(_externalLoginOptions.Facebook.ClientSecret))
             {
                 return null!;
             }
 
-            string accessTokenResponse = await _httpClient.GetStringAsync($"https://graph.facebook.com/oauth/access_token?client_id={_configuration["ExternalLoginSettings:Facebook:Client_ID"]}&client_secret={_configuration["ExternalLoginSettings:Facebook:Client_Secret"]}&grant_type=client_credentials");
+            string accessTokenResponse = await _httpClient.GetStringAsync($"https://graph.facebook.com/oauth/access_token?client_id={_externalLoginOptions.Facebook.ClientId}&client_secret={_externalLoginOptions.Facebook.ClientSecret}&grant_type=client_credentials");
 
             FacebookAccessTokenResponse? facebookAccessTokenResponse = JsonSerializer.Deserialize<FacebookAccessTokenResponse>(accessTokenResponse);
             string userAccessTokenValidation = await _httpClient.GetStringAsync($"https://graph.facebook.com/debug_token?input_token={authToken}&access_token={facebookAccessTokenResponse?.AccessToken}");
@@ -136,15 +136,15 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task<Token> GoogleLoginAsync(string idToken)
         {
-            // if "ExternalLoginSettings:Google" property is empty in appsettings.
-            if (string.IsNullOrWhiteSpace(_configuration["ExternalLoginSettings:Google:Client_ID"]))
+            // If Google external login settings are not configured, skip external login.
+            if (string.IsNullOrWhiteSpace(_externalLoginOptions.Google.ClientId))
             {
                 return null!;
             }
 
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
-                Audience = new List<string> { _configuration["ExternalLoginSettings:Google:Client_ID"] }
+                Audience = new List<string> { _externalLoginOptions.Google.ClientId }
             };
 
             GoogleJsonWebSignature.Payload? payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
@@ -200,7 +200,7 @@ namespace WebAppAPI.Persistence.Services
                 expirationDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
             }
 
-            string refreshBeforeTime = _configuration["TokenExpirations:RefreshBeforeTime"];
+            string refreshBeforeTime = _tokenExpirationOptions.RefreshBeforeTime.ToString();
 
             return new IdentityCheckDto
             {
@@ -266,7 +266,7 @@ namespace WebAppAPI.Persistence.Services
             _httpContextAccessor.HttpContext.Response.Cookies.Delete("accessToken", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = _authCookieSecure,
+                Secure = _authCookieOptions.Secure,
                 SameSite = SameSiteMode.Strict,
                 Path = "/"
             });
@@ -305,7 +305,7 @@ namespace WebAppAPI.Persistence.Services
 
                 Token token = _tokenHandler.CreateAccessToken(user);
                 string refreshToken = _tokenHandler.CreateRefreshToken();
-                await _userService.UpdateRefreshTokenAsync(user, refreshToken, refreshTokenExpirationTime);
+                await _userService.UpdateRefreshTokenAsync(user, refreshToken, _tokenExpirationOptions.RefreshToken);
 
                 // We're sending the access token as an HttpOnly cookie.
                 SetHttpOnlyAccessTokenCookie(token);
@@ -329,7 +329,7 @@ namespace WebAppAPI.Persistence.Services
             {
                 Token token = _tokenHandler.CreateAccessToken(user, true);
                 string newRefreshToken = _tokenHandler.CreateRefreshToken();
-                await _userService.UpdateRefreshTokenAsync(user, newRefreshToken, refreshTokenExpirationTime, true);
+                await _userService.UpdateRefreshTokenAsync(user, newRefreshToken, _tokenExpirationOptions.RefreshToken, true);
                 SetHttpOnlyAccessTokenCookie(token);
 
                 return token;
@@ -344,7 +344,7 @@ namespace WebAppAPI.Persistence.Services
             _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token.AccessToken, new CookieOptions
             {
                 HttpOnly = true, // Prevents JavaScript access.
-                Secure = _authCookieSecure, // If true, the cookie will only be sent over HTTPS.
+                Secure = _authCookieOptions.Secure, // If true, the cookie will only be sent over HTTPS.
                 Expires = token.Expiration, // Token's expiration time.
                 SameSite = SameSiteMode.Strict, // To prevent CSRF.
                 Path = "/" // It's only valid for the relevant path.

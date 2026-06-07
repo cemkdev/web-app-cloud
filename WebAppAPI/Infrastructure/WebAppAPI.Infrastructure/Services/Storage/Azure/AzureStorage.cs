@@ -1,8 +1,9 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using WebAppAPI.Application.Abstractions.Storage.Azure;
+using WebAppAPI.Application.Options.Storage;
 
 namespace WebAppAPI.Infrastructure.Services.Storage.Azure
 {
@@ -11,9 +12,9 @@ namespace WebAppAPI.Infrastructure.Services.Storage.Azure
         readonly BlobServiceClient _blobServiceClient;
         BlobContainerClient _blobContainerClient;
 
-        public AzureStorage(IConfiguration configuration)
+        public AzureStorage(IOptions<StorageOptions> storageOptions)
         {
-            _blobServiceClient = new(configuration["Storage:Azure"]);
+            _blobServiceClient = new(storageOptions.Value.Azure.ConnectionString);
         }
 
         public async Task DeleteAsync(string containerName, string fileName)

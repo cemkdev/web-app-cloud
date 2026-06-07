@@ -1,7 +1,8 @@
 ﻿using MediatR;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.DTOs;
+using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
 
 namespace WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems
@@ -9,12 +10,12 @@ namespace WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems
     public class GetAllBasketItemsQueryHandler : IRequestHandler<GetAllBasketItemsQueryRequest, List<GetAllBasketItemsQueryResponse>>
     {
         readonly IBasketService _basketService;
-        readonly IConfiguration _configuration;
+        readonly BaseStorageOptions _baseStorageOptions;
 
-        public GetAllBasketItemsQueryHandler(IBasketService basketService, IProductImageFileReadRepository productImageFileReadRepository, IConfiguration configuration)
+        public GetAllBasketItemsQueryHandler(IBasketService basketService, IProductImageFileReadRepository productImageFileReadRepository, IOptions<BaseStorageOptions> baseStorageOptions)
         {
             _basketService = basketService;
-            _configuration = configuration;
+            _baseStorageOptions = baseStorageOptions.Value;
         }
 
         public async Task<List<GetAllBasketItemsQueryResponse>> Handle(GetAllBasketItemsQueryRequest request, CancellationToken cancellationToken)
@@ -34,7 +35,7 @@ namespace WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems
                 {
                     ProductImageFileId = pif.Id.ToString(),
                     FileName = pif.FileName,
-                    Path = $"{_configuration["BaseStorageUrl"]}/{pif.Path}",
+                    Path = $"{_baseStorageOptions.Url}/{pif.Path}",
                 }).FirstOrDefault()
             }).ToList();
         }

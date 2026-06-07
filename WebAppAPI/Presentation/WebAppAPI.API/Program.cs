@@ -13,6 +13,7 @@ if (builder.Environment.IsDevelopment())
 }
 
 #region Services
+builder.Services.AddApiConfigurationOptions(builder.Configuration);
 builder.Services.AddWebAppApiDependencies(builder.Configuration);
 builder.Services.AddApiServices(builder.Configuration);
 builder.Services.AddApiObservability(builder.Configuration);
@@ -32,7 +33,7 @@ using (var scope = app.Services.CreateScope())
 
 #region Middlewares
 app.UseApiSwagger();
-app.UseApiPipeline<Program>();
+app.UseApiPipeline<Program>(builder.Configuration);
 app.MapApiEndpoints();
 #endregion
 
