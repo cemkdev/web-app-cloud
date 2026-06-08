@@ -40,7 +40,3 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-
-# Local SSL certs
-/src/assets/certs/localhost+2.pem
-/src/assets/certs/localhost+2-key.pem
