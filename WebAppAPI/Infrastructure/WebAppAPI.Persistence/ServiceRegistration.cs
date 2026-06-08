@@ -15,14 +15,10 @@ namespace WebAppAPI.Persistence
 {
     public static class ServiceRegistration
     {
-        // The method by which we will add services to the built-in IoC Container in the WebAPI project in the Presentation layer.
         public static void AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
         {
-            // We need to specify the database we will migrate using the Use commands to the "server" we will use.
-            // But which server? -> postgresql. That's why we need to install the relevant package to this project.
-            // If you execute migration commands via the dotnet CLI, you don't need this service.
-            //services.AddDbContext<WebAppAPIDbContext>(options => options.UseNpgsql(Configuration.ConnectionString));
-            services.AddDbContext<WebAppAPIDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("PostgreSQL")));
+            services.AddDbContext<WebAppAPIDbContext>(options =>
+                        options.UseNpgsql(configuration.GetConnectionString("PostgreSQL")));
 
             services.AddIdentity<AppUser, AppRole>(options =>
             {
@@ -32,9 +28,9 @@ namespace WebAppAPI.Persistence
                 options.Password.RequireLowercase = false;
                 options.Password.RequireUppercase = false;
             }).AddEntityFrameworkStores<WebAppAPIDbContext>()
-            .AddDefaultTokenProviders(); // AddDefaultTokenProviders() is for using GeneratePasswordResetTokenAsync() in our AuthService.
+            .AddDefaultTokenProviders(); // AddDefaultTokenProviders is required by UserManager.GeneratePasswordResetTokenAsync() in AuthService.
 
-            // Actual Table Entities Repositories
+            // Domain entity repositories
             services.AddScoped<ICustomerReadRepository, CustomerReadRepository>();
             services.AddScoped<ICustomerWriteRepository, CustomerWriteRepository>();
 
@@ -58,7 +54,7 @@ namespace WebAppAPI.Persistence
             services.AddScoped<IMenuReadRepository, MenuReadRepository>();
             services.AddScoped<IMenuWriteRepository, MenuWriteRepository>();
 
-            // File Table Entities Repositories
+            // File entity repositories
             services.AddScoped<IFileReadRepository, FileReadRepository>();
             services.AddScoped<IFileWriteRepository, FileWriteRepository>();
 
@@ -68,21 +64,21 @@ namespace WebAppAPI.Persistence
             services.AddScoped<IInvoiceFileReadRepository, InvoiceFileReadRepository>();
             services.AddScoped<IInvoiceFileWriteRepository, InvoiceFileWriteRepository>();
 
-            // User Table(Identity) Entities Services
+            // Authorization services
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IInternalAuthentication, AuthService>();
             services.AddScoped<IExternalAuthentication, AuthService>();
             services.AddScoped<IRoleService, RoleService>();
 
-            // Endpoint - Menu Entities Services
+            // Endpoint/Menu entities services
             services.AddScoped<IEndpointService, EndpointService>();
 
-            // Basket - Order Entities Service
+            // Basket/Order entities services
             services.AddScoped<IBasketService, BasketService>();
             services.AddScoped<IOrderService, OrderService>();
 
-            // Product Entity Service
+            // Product entity service
             services.AddScoped<IProductService, ProductService>();
         }
     }

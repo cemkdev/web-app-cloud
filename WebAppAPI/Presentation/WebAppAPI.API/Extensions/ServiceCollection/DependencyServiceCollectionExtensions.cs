@@ -13,6 +13,7 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
         public static IServiceCollection AddWebAppApiDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHttpContextAccessor();
+            services.AddHttpClient();
 
             services.AddPersistenceServices(configuration);
             services.AddInfrastructureServices();
