@@ -28,7 +28,7 @@ namespace WebAppAPI.API.Extensions.ApplicationBuilder
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.UseMiddleware<EndpointAdminCheckMiddleware>();
+            app.UseMiddleware<AdminOnlyHeaderMiddleware>();
 
             app.UseStatusCodePages();
 
