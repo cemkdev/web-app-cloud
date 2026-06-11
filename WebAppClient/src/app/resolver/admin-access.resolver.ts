@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { ResolveFn, Router } from '@angular/router';
 import { UserAuthService } from '../services/common/models/user-auth.service';
 import { catchError, map, of } from 'rxjs';
-import { SuperUser } from '../constants/super-user';
 
 export const adminAccessResolver: ResolveFn<boolean> = (route, state) => {
   const authService = inject(UserAuthService);
@@ -10,9 +9,6 @@ export const adminAccessResolver: ResolveFn<boolean> = (route, state) => {
 
   return authService.identityCheck$().pipe(
     map(identity => {
-      if (identity.username == SuperUser.username)
-        return true;
-
       if (identity?.isAuthenticated && identity?.isAdmin) {
         return true;
       } else {

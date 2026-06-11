@@ -25,7 +25,7 @@ namespace WebAppAPI.API.Filters
         {
             var username = context.HttpContext.User.Identity?.Name;
 
-            if (!string.IsNullOrEmpty(username) && username != "owner")
+            if (!string.IsNullOrEmpty(username))
             {
                 var descriptor = context.ActionDescriptor as ControllerActionDescriptor;
                 var authorizeDefinitionAttribute = descriptor?.MethodInfo.GetCustomAttribute(typeof(AuthorizeDefinitionAttribute)) as AuthorizeDefinitionAttribute;

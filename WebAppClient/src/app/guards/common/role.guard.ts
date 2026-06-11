@@ -4,7 +4,6 @@ import { UserAuthService } from '../../services/common/models/user-auth.service'
 import { NgxSpinnerService } from 'ngx-spinner';
 import { SpinnerType } from '../../base/base.component';
 import { CustomToastrService, ToastrMessageType, ToastrPosition } from '../../services/ui/custom-toastr.service';
-import { SuperUser } from '../../constants/super-user';
 import { AuthorizationEndpointService } from '../../services/common/models/authorization-endpoint.service';
 
 export const roleGuard: CanActivateFn = async (route, state) => {
@@ -21,21 +20,14 @@ export const roleGuard: CanActivateFn = async (route, state) => {
 
   try {
     let isAdmin: boolean = null;
-    let username: string;
 
     await userAuthService.identityCheck(result => {
       isAdmin = result?.isAdmin;
-      username = result?.username
     });
 
-    if (username == SuperUser.username) {
-      spinner.hide(SpinnerType.BallAtom);
-      return true;
-    }
-
-    // Admin Paneline mi gidilmek isteniyor kontrolü
+    // Check whether the requested route belongs to the admin panel.
     if (url.startsWith('/admin')) {
-      // Admin paneli ise 'admin' yetkisi var mı kontrolü
+      // If this is an admin panel route, verify that the user has admin access.
       if (!isAdmin) {
         spinner.hide(SpinnerType.BallAtom);
         toastrService.message("You are not authorized to view this page2.", "Unauthorized Access!", {
@@ -45,13 +37,13 @@ export const roleGuard: CanActivateFn = async (route, state) => {
         return router.parseUrl('/');
       }
 
-      // Özel sayfa adı tanımlanmamış. Muhtemelen sayfa boş... (Admin Panel tarafı)
+      // No specific menu name is defined. This is likely a general admin page.
       if (!menuName) {
-        spinner.hide(SpinnerType.BallAtom);
-        return true; // Örn. dashboard, custormers gibi sayfalar.
+        spinner.hide(SpinnerType.BallAtom); // Prevent spinner errors if the page is created but empty
+        return true;
       }
 
-      // Admin Panel endpoint-role ilişkisi yetki kontrolü
+      // Check endpoint-role access for the admin panel route.
       const hasAccess = await authorizationEndpointService.hasAccessToMenu(menuName);
       if (hasAccess) {
         spinner.hide(SpinnerType.BallAtom);
@@ -67,13 +59,13 @@ export const roleGuard: CanActivateFn = async (route, state) => {
       }
     }
 
-    // Özel sayfa adı tanımlanmamış. Muhtemelen sayfa boş... (UI tarafı)
+    // No specific menu name is defined. This is likely a general UI page.
     if (!menuName) {
-      spinner.hide(SpinnerType.BallAtom);
+      spinner.hide(SpinnerType.BallAtom); // Prevent spinner errors if the page is created but empty
       return true;
     }
 
-    // Admin Paneli dışındaki(ui tarafı) endpoint-role ilişkisi yetki kontrolü
+    // Check endpoint-role access for non-admin UI routes.
     const hasAccess = await authorizationEndpointService.hasAccessToMenu(menuName);
     if (hasAccess) {
       spinner.hide(SpinnerType.BallAtom);

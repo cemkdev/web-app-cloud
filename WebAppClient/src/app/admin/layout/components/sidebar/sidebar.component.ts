@@ -5,7 +5,6 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { UserAuthService } from '../../../../services/common/models/user-auth.service';
 import { AuthorizeDefinitionConstants } from '../../../../constants/authorize-definition.constants';
 import { AuthorizationEndpointService } from '../../../../services/common/models/authorization-endpoint.service';
-import { SuperUser } from '../../../../constants/super-user';
 
 export interface MenuItem {
   icon: string;
@@ -84,16 +83,9 @@ export class SidebarComponent {
     return this.collapsed() ? 'collapsed' : 'expanded';
   }
 
-  // Build MenuItems Dynamically
+  // Build menu items based on the user's accessible menus.
   filteredMenuItems = signal<MenuItem[]>([]);
   buildFilteredMenu() {
-    const username = this.userAuthService.username;
-
-    if (username == SuperUser.username) {
-      this.filteredMenuItems.set(this.menuItems());
-      return;
-    }
-
     const accessibleMenuNames = this.userAuthService.accessibleMenus;
     const allItems = this.menuItems();
     const visibleItems: MenuItem[] = [];
@@ -105,23 +97,23 @@ export class SidebarComponent {
           if (!subItem.menuName) return true;
           return accessibleMenuNames.includes(subItem.menuName);
         });
-        // Alt menülerden gösterilecek olan varsa, üst menüyü de göster
+        // Show the parent menu when at least one child item is visible.
         if (visibleSubItems.length > 0) {
           visibleItems.push({ ...item, subItems: visibleSubItems });
         }
         continue;
       }
-      // Alt menü yoksa ve menuName tanımlı değilse göster
+      // Show standalone items that do not require a menu permission.
       if (!item.menuName) {
         visibleItems.push(item);
         continue;
       }
-      // Tanımlı menuName varsa ve erişim varsa göster
+      // Show items with a menu permission only when the user has access.
       if (accessibleMenuNames.includes(item.menuName)) {
         visibleItems.push(item);
       }
     }
-    // signal’ı güncelle
+    // Update the filtered menu signal.
     this.filteredMenuItems.set(visibleItems);
   }
 

@@ -74,12 +74,19 @@ namespace WebAppAPI.Persistence.Contexts
 
             foreach (var item in data)
             {
-                var _ = item.State switch
+                switch (item.State)
                 {
-                    EntityState.Added => item.Entity.DateCreated = DateTime.UtcNow,
-                    EntityState.Modified => item.Entity.DateUpdated = DateTime.UtcNow,
-                    _ => DateTime.UtcNow
-                };
+                    case EntityState.Added:
+                        if (item.Entity.DateCreated == default)
+                            item.Entity.DateCreated = DateTime.UtcNow;
+
+                        if (item.Entity.DateUpdated == default)
+                            item.Entity.DateUpdated = item.Entity.DateCreated;
+                        break;
+                    case EntityState.Modified:
+                        item.Entity.DateUpdated = DateTime.UtcNow;
+                        break;
+                }
             }
 
             var identityEntries = ChangeTracker
@@ -87,12 +94,16 @@ namespace WebAppAPI.Persistence.Contexts
 
             foreach (var entry in identityEntries)
             {
-                var _ = entry.State switch
+                switch (entry.State)
                 {
-                    EntityState.Added => entry.Entity.DateCreated = DateTime.UtcNow,
-                    EntityState.Modified => entry.Entity.DateUpdated = DateTime.UtcNow,
-                    _ => DateTime.UtcNow
-                };
+                    case EntityState.Added:
+                        if (!entry.Entity.DateCreated.HasValue || entry.Entity.DateCreated.Value == default)
+                            entry.Entity.DateCreated = DateTime.UtcNow;
+                        break;
+                    case EntityState.Modified:
+                        entry.Entity.DateUpdated = DateTime.UtcNow;
+                        break;
+                }
             }
 
             return await base.SaveChangesAsync(cancellationToken);
