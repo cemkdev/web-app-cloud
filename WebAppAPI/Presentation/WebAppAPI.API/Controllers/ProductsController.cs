@@ -41,7 +41,6 @@ namespace WebAppAPI.API.Controllers
         }
 
         [HttpGet("get-product-by-id/{Id}")]
-        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Get Product By Id", ActionType = ActionType.Read, AdminOnly = true)]
         public async Task<IActionResult> GetProductById([FromRoute] GetByIdProductQueryRequest getByIdProductQueryRequest)
         {
             GetByIdProductQueryResponse response = await _mediator.Send(getByIdProductQueryRequest);
@@ -87,7 +86,7 @@ namespace WebAppAPI.API.Controllers
         // Used for all file upload requests coming from the client. However, it's only used for uploading product images right now.
         [HttpPost("[action]")]
         [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Upload Files", ActionType = ActionType.Write)]
+        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Upload Files", ActionType = ActionType.Write, AdminOnly = true)]
         public async Task<IActionResult> Upload([FromQuery] UploadProductImageCommandRequest uploadProductImageCommandRequest)
         {
             uploadProductImageCommandRequest.Files = Request.Form.Files;
@@ -97,8 +96,6 @@ namespace WebAppAPI.API.Controllers
         }
 
         [HttpGet("get-product-images-by-product-id/{id}")]
-        [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Get Product Images", ActionType = ActionType.Read)]
         public async Task<IActionResult> GetProductImages([FromRoute] GetProductImagesQueryRequest getProductImagesQueryRequest)
         {
             List<GetProductImagesQueryResponse> response = await _mediator.Send(getProductImagesQueryRequest);
@@ -125,6 +122,8 @@ namespace WebAppAPI.API.Controllers
         }
 
         [HttpGet("qrcode/{productId}")]
+        [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
+        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Get Product QR Code", ActionType = ActionType.Read, AdminOnly = true)]
         public async Task<IActionResult> GetQrCodeFromProduct([FromRoute] string productId)
         {
             var data = await _productService.QrCodeFromProductAsync(productId);
