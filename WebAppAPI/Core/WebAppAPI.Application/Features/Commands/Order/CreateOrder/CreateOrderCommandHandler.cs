@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Hubs;
 using WebAppAPI.Application.Abstractions.Services;
-using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Application.Features.Commands.Order.CreateOrder
@@ -21,9 +20,17 @@ namespace WebAppAPI.Application.Features.Commands.Order.CreateOrder
 
         public async Task<CreateOrderCommandResponse> Handle(CreateOrderCommandRequest request, CancellationToken cancellationToken)
         {
+            var basket = await _basketService.GetUserActiveBasketAsync(createIfNotExists: false);
+            if (basket == null)
+                throw new Exception("Cannot create order from an empty basket.");
+
+            var basketItems = await _basketService.GetAllBasketItemsAsync();
+            if (!basketItems.Any())
+                throw new Exception("Cannot create order from an empty basket.");
+
             var orderId = await _orderService.CreateOrderAsync(new()
             {
-                BasketId = _basketService?.GetUserActiveBasketAsync?.Id.ToString(),
+                BasketId = basket.Id.ToString(),
                 Description = request.Description,
                 Address = request.Address
             });

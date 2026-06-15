@@ -433,7 +433,7 @@ namespace WebAppAPI.Persistence.Seeding
                 // Store Manager + System Administrator
                 ["GET.Read.GetAllOrders"] = new[] { "StoreManager", "SystemAdministrator" },
                 ["GET.Read.GetOrderbyId"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["POST.Write.CreateOrder"] = new[] { "StoreManager", "SystemAdministrator" },
+                ["POST.Write.CreateOrder"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
                 ["PUT.Update.UpdateOrderStatus"] = new[] { "StoreManager", "SystemAdministrator" },
                 ["GET.Read.GetOrderStatusHistorybyId"] = new[] { "StoreManager", "SystemAdministrator" },
                 ["POST.Write.CreateProduct"] = new[] { "StoreManager", "SystemAdministrator" },

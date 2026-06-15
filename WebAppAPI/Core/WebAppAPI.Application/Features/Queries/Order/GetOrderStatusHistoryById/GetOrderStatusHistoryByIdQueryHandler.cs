@@ -16,6 +16,9 @@ namespace WebAppAPI.Application.Features.Queries.Order.GetOrderStatusHistoryById
         {
             var orderStatusHistory = await _orderService.GetOrderStatusHistoryByIdAsync(request.OrderId);
 
+            if (orderStatusHistory == null)
+                throw new Exception("Order status history could not be loaded.");
+
             return new()
             {
                 CurrentStatusId = orderStatusHistory.CurrentStatusId,

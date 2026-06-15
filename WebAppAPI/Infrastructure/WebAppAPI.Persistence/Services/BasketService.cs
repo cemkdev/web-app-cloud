@@ -39,7 +39,7 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task AddItemToBasketAsync(VM_Create_BasketItem basketItem)
         {
-            Basket? basket = await ContextUser();
+            Basket? basket = await ContextUser(createIfNotExists: true);
             if (basket != null)
             {
                 BasketItem _basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.BasketId == basket.Id && bi.ProductId == Guid.Parse(basketItem.ProductId));
@@ -59,7 +59,9 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task<List<BasketItem>> GetAllBasketItemsAsync()
         {
-            Basket? basket = await ContextUser();
+            Basket? basket = await ContextUser(createIfNotExists: false);
+            if (basket == null)
+                return new();
 
             Basket? result = await _basketReadRepository.Table
                                    .Include(bi => bi.BasketItems)
@@ -67,21 +69,24 @@ namespace WebAppAPI.Persistence.Services
                                    .ThenInclude(pi => pi.ProductImageFiles)
                                    .FirstOrDefaultAsync(b => b.Id == basket.Id);
 
-            return result.BasketItems.OrderBy(bi => bi.DateCreated).ToList();
+            return result?.BasketItems.OrderBy(bi => bi.DateCreated).ToList() ?? new();
         }
 
-        public Basket? GetUserActiveBasketAsync
+        public async Task<Basket?> GetUserActiveBasketAsync(bool createIfNotExists = false)
         {
-            get
-            {
-                Basket? basket = ContextUser().Result;
-                return basket;
-            }
+            return await ContextUser(createIfNotExists);
         }
 
         public async Task RemoveBasketItemAsync(string basketItemId)
         {
-            BasketItem? basketItem = await _basketItemReadRepository.GetByIdAsync(basketItemId);
+            if (!Guid.TryParse(basketItemId, out var basketItemGuid))
+                return;
+
+            Basket? basket = await ContextUser(createIfNotExists: false);
+            if (basket == null)
+                return;
+
+            BasketItem? basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
             if (basketItem != null)
             {
                 _basketItemWriteRepository.Remove(basketItem);
@@ -91,7 +96,14 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task UpdateQuantityAsync(VM_Update_BasketItem basketItem)
         {
-            BasketItem? _basketItem = await _basketItemReadRepository.GetByIdAsync(basketItem.BasketItemId);
+            if (!Guid.TryParse(basketItem.BasketItemId, out var basketItemGuid))
+                return;
+
+            Basket? basket = await ContextUser(createIfNotExists: false);
+            if (basket == null)
+                return;
+
+            BasketItem? _basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
             if (_basketItem != null)
             {
                 _basketItem.Quantity = basketItem.Quantity;
@@ -100,7 +112,7 @@ namespace WebAppAPI.Persistence.Services
         }
 
         #region Helpers
-        private async Task<Basket?> ContextUser()
+        private async Task<Basket?> ContextUser(bool createIfNotExists)
         {
             var username = _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
 
@@ -123,12 +135,12 @@ namespace WebAppAPI.Persistence.Services
                 Basket? targetBasket = null;
                 if (_basket.Any(o => o.Order is null))
                     targetBasket = _basket.FirstOrDefault(o => o.Order is null)?.Basket;
-                else
+                else if (createIfNotExists)
                 {
                     targetBasket = new();
                     user.Baskets.Add(targetBasket);
+                    await _basketWriteRepository.SaveAsync();
                 }
-                await _basketWriteRepository.SaveAsync();
 
                 return targetBasket;
             }

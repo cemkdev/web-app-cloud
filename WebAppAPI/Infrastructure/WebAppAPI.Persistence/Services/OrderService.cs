@@ -17,6 +17,10 @@ namespace WebAppAPI.Persistence.Services
         readonly IOrderReadRepository _orderReadRepository;
         readonly IOrderStatusHistoryReadRepository _orderStatusHistoryReadRepository;
         readonly IOrderStatusHistoryWriteRepository _orderStatusHistoryWriteRepository;
+        readonly IBasketReadRepository _basketReadRepository;
+        readonly IBasketWriteRepository _basketWriteRepository;
+        readonly IBasketItemReadRepository _basketItemReadRepository;
+        readonly IBasketItemWriteRepository _basketItemWriteRepository;
         readonly IMailService _mailService;
         readonly BaseStorageOptions _baseStorageOptions;
 
@@ -25,6 +29,10 @@ namespace WebAppAPI.Persistence.Services
             IOrderReadRepository orderReadRepository,
             IOrderStatusHistoryReadRepository orderStatusHistoryReadRepository,
             IOrderStatusHistoryWriteRepository orderStatusHistoryWriteRepository,
+            IBasketReadRepository basketReadRepository,
+            IBasketWriteRepository basketWriteRepository,
+            IBasketItemReadRepository basketItemReadRepository,
+            IBasketItemWriteRepository basketItemWriteRepository,
             IMailService mailService,
             IOptions<BaseStorageOptions> baseStorageOptions)
         {
@@ -32,6 +40,10 @@ namespace WebAppAPI.Persistence.Services
             _orderReadRepository = orderReadRepository;
             _orderStatusHistoryReadRepository = orderStatusHistoryReadRepository;
             _orderStatusHistoryWriteRepository = orderStatusHistoryWriteRepository;
+            _basketReadRepository = basketReadRepository;
+            _basketWriteRepository = basketWriteRepository;
+            _basketItemReadRepository = basketItemReadRepository;
+            _basketItemWriteRepository = basketItemWriteRepository;
             _mailService = mailService;
             _baseStorageOptions = baseStorageOptions.Value;
         }
@@ -78,12 +90,18 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task<OrderDetail> GetOrderByIdAsync(string id)
         {
+            if (!Guid.TryParse(id, out var orderGuid))
+                throw new Exception("Invalid order id.");
+
             var order = await _orderReadRepository.Table
                                 .Include(o => o.Basket)
                                     .ThenInclude(b => b.BasketItems)
                                         .ThenInclude(bi => bi.Product)
                                             .ThenInclude(p => p.ProductImageFiles)
-                                .FirstOrDefaultAsync(o => o.Id == Guid.Parse(id));
+                                .FirstOrDefaultAsync(o => o.Id == orderGuid);
+
+            if (order == null)
+                throw new Exception("An Order with the specified ID could not be found.");
 
             var orderDetail = new OrderDetail()
             {
@@ -163,25 +181,77 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task<OrderStatusHistoryDto> GetOrderStatusHistoryByIdAsync(string orderId)
         {
-            OrderStatusHistoryDto orderStatusHistory = null;
-            Order order = await _orderReadRepository.GetByIdAsync(orderId);
-            if (order != null)
+            if (!Guid.TryParse(orderId, out var orderGuid))
+                throw new Exception("Invalid order id.");
+
+            Order order = await _orderReadRepository.GetByIdAsync(orderGuid.ToString());
+            if (order == null)
+                throw new Exception("An Order with the specified ID could not be found.");
+
+            var statusHistoryList = await _orderStatusHistoryReadRepository
+                .GetWhere(os => os.OrderId == orderGuid)
+                .ToListAsync();
+
+            return new OrderStatusHistoryDto
             {
-                var statusHistoryList = await _orderStatusHistoryReadRepository.GetWhere(os => os.OrderId == Guid.Parse(orderId)).ToListAsync();
-                orderStatusHistory = new OrderStatusHistoryDto
+                CurrentStatusId = order.StatusId,
+                History = statusHistoryList.Select(sh => new StatusChangeEntry
                 {
-                    CurrentStatusId = order.StatusId,
-                    History = statusHistoryList.Select(sh => new StatusChangeEntry
-                    {
-                        NewStatusId = sh.NewStatusId,
-                        ChangedDate = sh.ChangedDate
-                    }).ToList()
-                };
+                    NewStatusId = sh.NewStatusId,
+                    ChangedDate = sh.ChangedDate
+                }).ToList()
+            };
+        }
+
+        public async Task DeleteOrderAsync(string id)
+        {
+            if (!Guid.TryParse(id, out var orderId))
+                throw new Exception("Invalid order id.");
+
+            await DeleteOrderAggregateAsync(orderId);
+            await _orderWriteRepository.SaveAsync();
+        }
+
+        public async Task DeleteRangeOrderAsync(IEnumerable<string> ids)
+        {
+            foreach (var id in ids)
+            {
+                if (!Guid.TryParse(id, out var orderId))
+                    throw new Exception("Invalid order id.");
+
+                await DeleteOrderAggregateAsync(orderId);
             }
-            return orderStatusHistory;
+            await _orderWriteRepository.SaveAsync();
         }
 
         #region Helpers - Methods
+        private async Task DeleteOrderAggregateAsync(Guid orderId)
+        {
+            var order = await _orderReadRepository.GetByIdAsync(orderId.ToString());
+            if (order == null)
+                throw new Exception("An Order with the specified ID could not be found.");
+
+            var basket = await _basketReadRepository.GetByIdAsync(orderId.ToString());
+            if (basket == null)
+                throw new Exception("A Basket with the specified ID could not be found.");
+
+            var statusHistories = await _orderStatusHistoryReadRepository
+                .GetWhere(sh => sh.OrderId == orderId)
+                .ToListAsync();
+
+            if (statusHistories.Count > 0)
+                _orderStatusHistoryWriteRepository.RemoveRange(statusHistories);
+
+            var basketItems = await _basketItemReadRepository
+                .GetWhere(bi => bi.BasketId == orderId)
+                .ToListAsync();
+            if (basketItems.Count > 0)
+                _basketItemWriteRepository.RemoveRange(basketItems);
+
+            _orderWriteRepository.Remove(order);
+            _basketWriteRepository.Remove(basket);
+        }
+
         private string GenerateOrderCode()
         {
             Span<byte> buffer = stackalloc byte[8];
@@ -191,7 +261,7 @@ namespace WebAppAPI.Persistence.Services
             long positive10Digit = Math.Abs(randomNumber % 9_000_000_000L) + 1_000_000_000L;
             string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
 
-            // String Interpolation - (It is enough fot this app.)
+            // String Interpolation - (It is enough for this app.)
             //return $"ORD_{positive10Digit}_{timestamp}";
 
             // string.Create() - more memory-friendly string concatenation.(If necessary...)

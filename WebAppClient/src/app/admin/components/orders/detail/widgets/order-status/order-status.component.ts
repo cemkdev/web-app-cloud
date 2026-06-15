@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { OrderService } from '../../../../../../services/common/models/order.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { AlertifyService, MessageType, Position } from '../../../../../../services/admin/alertify.service';
@@ -17,7 +17,7 @@ import { Subscription } from 'rxjs';
   standalone: false,
   templateUrl: './order-status.component.html'
 })
-export class OrderStatusComponent implements OnInit {
+export class OrderStatusComponent implements OnInit, OnDestroy {
   @Input() orderId!: string;
   private _subscription: Subscription;
 
@@ -48,6 +48,10 @@ export class OrderStatusComponent implements OnInit {
       .subscribe(() => {
         this.initializeOrderStatus(); // This runs when the event is triggered.
       });
+  }
+
+  ngOnDestroy(): void {
+    this._subscription?.unsubscribe();
   }
 
   private async initializeOrderStatus() {

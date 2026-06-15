@@ -131,7 +131,7 @@
           data-bs-toggle="modal"
           data-bs-target="#basketModal"
           (click)="loadComponent()"
-          *ngIf="authService.isAuthenticated && userAuthService.isAdmin"
+          *ngIf="authService.isAuthenticated"
         >
           <i class="bi bi-cart-check"></i>
         </a>

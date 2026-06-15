@@ -1,24 +1,20 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Repositories;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Commands.Order.RemoveRangeOrder
 {
     public class RemoveRangeOrderCommandHandler : IRequestHandler<RemoveRangeOrderCommandRequest, RemoveRangeOrderCommandResponse>
     {
-        readonly IOrderWriteRepository _orderWriteRepository;
+        readonly IOrderService _orderService;
 
-        public RemoveRangeOrderCommandHandler(IOrderWriteRepository orderWriteRepository)
+        public RemoveRangeOrderCommandHandler(IOrderService orderService)
         {
-            _orderWriteRepository = orderWriteRepository;
+            _orderService = orderService;
         }
 
         public async Task<RemoveRangeOrderCommandResponse> Handle(RemoveRangeOrderCommandRequest request, CancellationToken cancellationToken)
         {
-            foreach (var RemovingOrderId in request.OrderIds)
-            {
-                await _orderWriteRepository.RemoveAsync(RemovingOrderId);
-            }
-            await _orderWriteRepository.SaveAsync();
+            await _orderService.DeleteRangeOrderAsync(request.OrderIds);
 
             return new();
         }

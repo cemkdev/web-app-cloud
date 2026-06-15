@@ -1,21 +1,20 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Repositories;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Commands.Order.RemoveOrder
 {
     public class RemoveOrderCommandHandler : IRequestHandler<RemoveOrderCommandRequest, RemoveOrderCommandResponse>
     {
-        readonly IOrderWriteRepository _orderWriteRepository;
+        readonly IOrderService _orderService;
 
-        public RemoveOrderCommandHandler(IOrderWriteRepository orderWriteRepository)
+        public RemoveOrderCommandHandler(IOrderService orderService)
         {
-            _orderWriteRepository = orderWriteRepository;
+            _orderService = orderService;
         }
 
         public async Task<RemoveOrderCommandResponse> Handle(RemoveOrderCommandRequest request, CancellationToken cancellationToken)
         {
-            await _orderWriteRepository.RemoveAsync(request.Id);
-            await _orderWriteRepository.SaveAsync();
+            await _orderService.DeleteOrderAsync(request.Id);
 
             return new();
         }
