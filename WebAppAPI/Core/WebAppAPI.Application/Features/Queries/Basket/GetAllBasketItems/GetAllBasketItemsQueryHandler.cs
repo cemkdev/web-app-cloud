@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.DTOs;
 using WebAppAPI.Application.Options.Storage;
-using WebAppAPI.Application.Repositories;
 
 namespace WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems
 {
@@ -12,7 +11,7 @@ namespace WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems
         readonly IBasketService _basketService;
         readonly BaseStorageOptions _baseStorageOptions;
 
-        public GetAllBasketItemsQueryHandler(IBasketService basketService, IProductImageFileReadRepository productImageFileReadRepository, IOptions<BaseStorageOptions> baseStorageOptions)
+        public GetAllBasketItemsQueryHandler(IBasketService basketService, IOptions<BaseStorageOptions> baseStorageOptions)
         {
             _basketService = basketService;
             _baseStorageOptions = baseStorageOptions.Value;

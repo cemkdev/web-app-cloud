@@ -96,19 +96,26 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task UpdateQuantityAsync(VM_Update_BasketItem basketItem)
         {
-            if (!Guid.TryParse(basketItem.BasketItemId, out var basketItemGuid))
-                return;
+            if (!Guid.TryParse(basketItem.BasketItemId, out var basketItemGuid)) return;
 
             Basket? basket = await ContextUser(createIfNotExists: false);
-            if (basket == null)
-                return;
 
-            BasketItem? _basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
-            if (_basketItem != null)
-            {
-                _basketItem.Quantity = basketItem.Quantity;
-                await _basketItemWriteRepository.SaveAsync();
-            }
+            if (basket == null) return;
+
+            BasketItem? currentBasketItem = await _basketItemReadRepository.Table
+                                                    .Include(bi => bi.Product)
+                                                    .FirstOrDefaultAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
+
+            if (currentBasketItem == null) return;
+
+            if (currentBasketItem.Product == null)
+                throw new Exception("Product not found.");
+
+            if (basketItem.Quantity > currentBasketItem.Product.Stock)
+                throw new Exception("Quantity exceeds available stock.");
+
+            currentBasketItem.Quantity = basketItem.Quantity;
+            await _basketItemWriteRepository.SaveAsync();
         }
 
         #region Helpers

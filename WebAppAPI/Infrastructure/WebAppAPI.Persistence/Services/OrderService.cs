@@ -23,6 +23,7 @@ namespace WebAppAPI.Persistence.Services
         readonly IBasketItemWriteRepository _basketItemWriteRepository;
         readonly IMailService _mailService;
         readonly BaseStorageOptions _baseStorageOptions;
+        readonly IBasketService _basketService;
 
         public OrderService(
             IOrderWriteRepository orderWriteRepository,
@@ -34,7 +35,8 @@ namespace WebAppAPI.Persistence.Services
             IBasketItemReadRepository basketItemReadRepository,
             IBasketItemWriteRepository basketItemWriteRepository,
             IMailService mailService,
-            IOptions<BaseStorageOptions> baseStorageOptions)
+            IOptions<BaseStorageOptions> baseStorageOptions,
+            IBasketService basketService)
         {
             _orderWriteRepository = orderWriteRepository;
             _orderReadRepository = orderReadRepository;
@@ -46,22 +48,32 @@ namespace WebAppAPI.Persistence.Services
             _basketItemWriteRepository = basketItemWriteRepository;
             _mailService = mailService;
             _baseStorageOptions = baseStorageOptions.Value;
+            _basketService = basketService;
         }
 
-        public async Task<string> CreateOrderAsync(CreateOrder createOrder)
+        public async Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder)
         {
+            var basket = await _basketService.GetUserActiveBasketAsync(createIfNotExists: false)
+                ?? throw new Exception("Active basket not found.");
+
+            await EnsureBasketHasItemsAsync(basket.Id);
+
             var order = new Order
             {
-                Id = Guid.Parse(createOrder.BasketId),
+                Id = basket.Id,
                 Address = createOrder.Address,
                 Description = createOrder.Description,
                 OrderCode = GenerateOrderCode(),
                 StatusId = (int)OrderStatusEnum.Pending
             };
+
             await _orderWriteRepository.AddAsync(order);
             await _orderWriteRepository.SaveAsync();
 
-            return order.Id.ToString();
+            string orderId = order.Id.ToString();
+            await UpdateOrderStatusAsync(orderId, OrderStatusEnum.Pending);
+
+            return orderId;
         }
 
         public async Task<ListOrder> GetAllOrdersAsync(int page, int size)
@@ -155,9 +167,9 @@ namespace WebAppAPI.Persistence.Services
                 await _orderStatusHistoryWriteRepository.AddAsync(orderStatusHistory);
                 var historySaveResult = await _orderStatusHistoryWriteRepository.SaveAsync();
 
-                if (historySaveResult > 0) // If 'OrderStatusHistory' saving process is success.
+                // If 'OrderStatusHistory' saving process is success.
+                if (historySaveResult > 0)
                 {
-                    //// Update Order -> StatusId
                     if (newStatus != currentStatus)
                     {
                         order.StatusId = (int)newStatus;
@@ -225,6 +237,15 @@ namespace WebAppAPI.Persistence.Services
         }
 
         #region Helpers - Methods
+        private async Task EnsureBasketHasItemsAsync(Guid basketId)
+        {
+            bool hasBasketItems = await _basketItemReadRepository.Table
+                .AnyAsync(bi => bi.BasketId == basketId);
+
+            if (!hasBasketItems)
+                throw new Exception("Cannot create an order from an empty basket.");
+        }
+
         private async Task DeleteOrderAggregateAsync(Guid orderId)
         {
             var order = await _orderReadRepository.GetByIdAsync(orderId.ToString());

@@ -5,7 +5,7 @@ namespace WebAppAPI.Application.Abstractions.Services
 {
     public interface IOrderService
     {
-        Task<string> CreateOrderAsync(CreateOrder createOrder);
+        Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder);
         Task<ListOrder> GetAllOrdersAsync(int page, int size);
         Task<OrderDetail> GetOrderByIdAsync(string id);
         Task UpdateOrderStatusAsync(string orderId, OrderStatusEnum newStatus);
