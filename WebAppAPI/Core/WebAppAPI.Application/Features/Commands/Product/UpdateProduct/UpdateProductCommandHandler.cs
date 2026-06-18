@@ -1,33 +1,28 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Repositories;
-using E = WebAppAPI.Domain.Entities;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Commands.Product.UpdateProduct
 {
-    internal class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommandRequest, UpdateProductCommandResponse>
+    public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommandRequest, UpdateProductCommandResponse>
     {
-        readonly IProductReadRepository _productReadRepository;
-        readonly IProductWriteRepository _productWriteRepository;
+        readonly IProductService _productService;
 
-        public UpdateProductCommandHandler(
-            IProductReadRepository productReadRepository,
-            IProductWriteRepository productWriteRepository)
+        public UpdateProductCommandHandler(IProductService productService)
         {
-            _productReadRepository = productReadRepository;
-            _productWriteRepository = productWriteRepository;
+            _productService = productService;
         }
 
         public async Task<UpdateProductCommandResponse> Handle(UpdateProductCommandRequest request, CancellationToken cancellationToken)
         {
-            E.Product product = await _productReadRepository.GetByIdAsync(request.Id);
-            product.Name = request.Name ?? product.Name;
-            product.Stock = request.Stock ?? product.Stock;
-            product.Price = request.Price ?? product.Price;
-            product.Title = request.Title ?? product.Title;
-            product.Description = request.Description ?? product.Description;
-            await _productWriteRepository.SaveAsync();
-
-            //_logger.LogInformation("Product updated...");
+            await _productService.UpdateProductAsync(new()
+            {
+                Id = request.Id,
+                Name = request.Name,
+                Stock = request.Stock,
+                Price = request.Price,
+                Title = request.Title,
+                Description = request.Description
+            });
 
             return new();
         }

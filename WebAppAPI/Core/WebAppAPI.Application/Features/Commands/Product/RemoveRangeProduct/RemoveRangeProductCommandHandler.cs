@@ -1,24 +1,20 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Repositories;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Commands.Product.RemoveRangeProduct
 {
     public class RemoveRangeProductCommandHandler : IRequestHandler<RemoveRangeProductCommandRequest, RemoveRangeProductCommandResponse>
     {
-        readonly IProductWriteRepository _productWriteRepository;
+        readonly IProductService _productService;
 
-        public RemoveRangeProductCommandHandler(IProductWriteRepository productWriteRepository)
+        public RemoveRangeProductCommandHandler(IProductService productService)
         {
-            _productWriteRepository = productWriteRepository;
+            _productService = productService;
         }
 
         public async Task<RemoveRangeProductCommandResponse> Handle(RemoveRangeProductCommandRequest request, CancellationToken cancellationToken)
         {
-            foreach (var RemovingProductId in request.ProductIds)
-            {
-                await _productWriteRepository.RemoveAsync(RemovingProductId);
-            }
-            await _productWriteRepository.SaveAsync();
+            await _productService.RemoveRangeProductAsync(request.ProductIds);
 
             return new();
         }

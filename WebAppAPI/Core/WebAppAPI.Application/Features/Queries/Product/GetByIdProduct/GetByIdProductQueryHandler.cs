@@ -1,21 +1,21 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Repositories;
-using E = WebAppAPI.Domain.Entities;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Queries.Product.GetByIdProduct
 {
     public class GetByIdProductQueryHandler : IRequestHandler<GetByIdProductQueryRequest, GetByIdProductQueryResponse>
     {
-        readonly IProductReadRepository _productReadRepository;
+        readonly IProductService _productService;
 
-        public GetByIdProductQueryHandler(IProductReadRepository productReadRepository)
+        public GetByIdProductQueryHandler(IProductService productService)
         {
-            _productReadRepository = productReadRepository;
+            _productService = productService;
         }
 
         public async Task<GetByIdProductQueryResponse> Handle(GetByIdProductQueryRequest request, CancellationToken cancellationToken)
         {
-            E.Product product = await _productReadRepository.GetByIdAsync(request.Id, false);
+            var product = await _productService.GetProductByIdAsync(request.Id);
+
             return new()
             {
                 Name = product.Name,

@@ -1,23 +1,23 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Hubs;
-using WebAppAPI.Application.Repositories;
+using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Commands.Product.CreateProduct
 {
     public class CreateProductCommandHandler : IRequestHandler<CreateProductCommandRequest, CreateProductCommandResponse>
     {
-        readonly IProductWriteRepository _productWriteRepository;
+        readonly IProductService _productService;
         readonly IProductHubService _productHubService;
 
-        public CreateProductCommandHandler(IProductWriteRepository productWriteRepository, IProductHubService productHubService)
+        public CreateProductCommandHandler(IProductService productService, IProductHubService productHubService)
         {
-            _productWriteRepository = productWriteRepository;
+            _productService = productService;
             _productHubService = productHubService;
         }
 
         public async Task<CreateProductCommandResponse> Handle(CreateProductCommandRequest request, CancellationToken cancellationToken)
         {
-            await _productWriteRepository.AddAsync(new()
+            await _productService.CreateProductAsync(new()
             {
                 Name = request.Name,
                 Stock = request.Stock,
@@ -25,7 +25,6 @@ namespace WebAppAPI.Application.Features.Commands.Product.CreateProduct
                 Title = request.Title,
                 Description = request.Description
             });
-            await _productWriteRepository.SaveAsync();
 
             await _productHubService.ProductAddedMessageAsync($"'{request.Name}' has been added.");
 

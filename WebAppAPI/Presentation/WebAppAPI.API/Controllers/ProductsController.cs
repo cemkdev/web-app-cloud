@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
-using WebAppAPI.Application.Abstractions;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
@@ -15,6 +14,7 @@ using WebAppAPI.Application.Features.Commands.ProductImageFile.RemoveProductImag
 using WebAppAPI.Application.Features.Commands.ProductImageFile.UploadProductImage;
 using WebAppAPI.Application.Features.Queries.Product.GetAllProducts;
 using WebAppAPI.Application.Features.Queries.Product.GetByIdProduct;
+using WebAppAPI.Application.Features.Queries.Product.GetQrCodeFromProduct;
 using WebAppAPI.Application.Features.Queries.ProductImageFile.GetProductImages;
 using WebAppAPI.Domain.Constants;
 
@@ -25,12 +25,10 @@ namespace WebAppAPI.API.Controllers
     public class ProductsController : ControllerBase
     {
         readonly IMediator _mediator;
-        readonly IProductService _productService;
 
-        public ProductsController(IMediator mediator, IProductService productService)
+        public ProductsController(IMediator mediator)
         {
             _mediator = mediator;
-            _productService = productService;
         }
 
         [HttpGet("get-all-products")]
@@ -124,10 +122,10 @@ namespace WebAppAPI.API.Controllers
         [HttpGet("qrcode/{productId}")]
         [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Products, Definition = "Get Product QR Code", ActionType = ActionType.Read, AdminOnly = true)]
-        public async Task<IActionResult> GetQrCodeFromProduct([FromRoute] string productId)
+        public async Task<IActionResult> GetQrCodeFromProduct([FromRoute] GetQrCodeFromProductQueryRequest getQrCodeFromProductQueryRequest)
         {
-            var data = await _productService.QrCodeFromProductAsync(productId);
-            return File(data, "image/png");
+            GetQrCodeFromProductQueryResponse response = await _mediator.Send(getQrCodeFromProductQueryRequest);
+            return File(response.QrCode, "image/png");
         }
     }
 }
