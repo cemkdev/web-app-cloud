@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using WebAppAPI.Application.Abstractions.Services;
@@ -9,44 +8,36 @@ using WebAppAPI.Application.DTOs.Product;
 using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities;
+using FileEntity = WebAppAPI.Domain.Entities.File;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class ProductService : IProductService
+    public class ProductService(
+        IProductReadRepository productReadRepository,
+        IWriteRepository<Product> productWriteRepository,
+        IProductImageFileReadRepository productImageFileReadRepository,
+        IWriteRepository<ProductImageFile> productImageFileWriteRepository,
+        IStorageService storageService,
+        IWriteRepository<FileEntity> fileWriteRepository,
+        IWebHostEnvironment webHostEnvironment,
+        IOptions<BaseStorageOptions> baseStorageOptions,
+        IOptions<StorageOptions> storageOptions,
+        IQRCodeService qrCodeService,
+        IUnitOfWork unitOfWork) : IProductService
     {
-        readonly IProductReadRepository _productReadRepository;
-        readonly IProductWriteRepository _productWriteRepository;
-        readonly IProductImageFileWriteRepository _productImageFileWriteRepository;
-        readonly IStorageService _storageService;
-        readonly IFileWriteRepository _fileWriteRepository;
-        readonly IWebHostEnvironment _webHostEnvironment;
-        readonly BaseStorageOptions _baseStorageOptions;
-        readonly StorageOptions _storageOptions;
-        readonly IQRCodeService _qrCodeService;
+        private readonly IProductReadRepository _productReadRepository = productReadRepository;
+        private readonly IWriteRepository<Product> _productWriteRepository = productWriteRepository;
+        private readonly IProductImageFileReadRepository _productImageFileReadRepository = productImageFileReadRepository;
+        private readonly IWriteRepository<ProductImageFile> _productImageFileWriteRepository = productImageFileWriteRepository;
+        private readonly IStorageService _storageService = storageService;
+        private readonly IWriteRepository<FileEntity> _fileWriteRepository = fileWriteRepository;
+        private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
+        private readonly BaseStorageOptions _baseStorageOptions = baseStorageOptions.Value;
+        private readonly StorageOptions _storageOptions = storageOptions.Value;
+        private readonly IQRCodeService _qrCodeService = qrCodeService;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
         private const string LocalStorageName = "LocalStorage";
-
-        public ProductService(
-            IProductReadRepository productReadRepository,
-            IProductWriteRepository productWriteRepository,
-            IProductImageFileWriteRepository productImageFileWriteRepository,
-            IStorageService storageService,
-            IFileWriteRepository fileWriteRepository,
-            IWebHostEnvironment webHostEnvironment,
-            IOptions<BaseStorageOptions> baseStorageOptions,
-            IOptions<StorageOptions> storageOptions,
-            IQRCodeService qrCodeService)
-        {
-            _productReadRepository = productReadRepository;
-            _productWriteRepository = productWriteRepository;
-            _productImageFileWriteRepository = productImageFileWriteRepository;
-            _storageService = storageService;
-            _fileWriteRepository = fileWriteRepository;
-            _webHostEnvironment = webHostEnvironment;
-            _baseStorageOptions = baseStorageOptions.Value;
-            _storageOptions = storageOptions.Value;
-            _qrCodeService = qrCodeService;
-        }
 
         public async Task CreateProductAsync(CreateProductDto product)
         {
@@ -61,7 +52,7 @@ namespace WebAppAPI.Persistence.Services
                 Description = product.Description
             });
 
-            await _productWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateProductAsync(UpdateProductDto product)
@@ -70,7 +61,11 @@ namespace WebAppAPI.Persistence.Services
 
             if (string.IsNullOrWhiteSpace(product.Id))
                 throw new Exception("Product id is required.");
-            Product existingProduct = await _productReadRepository.GetByIdAsync(product.Id);
+
+            if (!Guid.TryParse(product.Id, out Guid productGuid))
+                throw new Exception("Product id is not valid.");
+
+            Product? existingProduct = await _productReadRepository.GetByIdAsync(productGuid, tracking: true);
 
             if (existingProduct == null)
                 throw new Exception("Product not found.");
@@ -81,7 +76,7 @@ namespace WebAppAPI.Persistence.Services
             existingProduct.Title = product.Title ?? existingProduct.Title;
             existingProduct.Description = product.Description ?? existingProduct.Description;
 
-            await _productWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task RemoveProductAsync(string id)
@@ -92,9 +87,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(id, out Guid productGuid))
                 throw new Exception("Product id is not valid.");
 
-            Product? product = await _productReadRepository.Table
-                .Include(p => p.ProductImageFiles)
-                .FirstOrDefaultAsync(p => p.Id == productGuid);
+            Product? product = await _productReadRepository.GetByIdWithImagesAsync(productGuid, tracking: true);
 
             if (product == null)
                 throw new Exception("Product not found.");
@@ -103,11 +96,11 @@ namespace WebAppAPI.Persistence.Services
             List<string> localImagePaths = GetLocalImagePathsForDeletion(productImageFiles);
 
             if (productImageFiles.Count > 0)
-                _fileWriteRepository.RemoveRange(productImageFiles.Cast<Domain.Entities.File>().ToList());
+                _fileWriteRepository.RemoveRange(productImageFiles.Cast<FileEntity>().ToList());
 
             _productWriteRepository.Remove(product);
 
-            await _productWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             DeleteLocalPhysicalFiles(localImagePaths);
         }
@@ -132,10 +125,7 @@ namespace WebAppAPI.Persistence.Services
             if (productGuids.Count == 0)
                 throw new Exception("At least one product must be selected for deletion.");
 
-            List<Product> products = await _productReadRepository.Table
-                .Include(p => p.ProductImageFiles)
-                .Where(p => productGuids.Contains(p.Id))
-                .ToListAsync();
+            List<Product> products = await _productReadRepository.GetByIdsWithImagesAsync(productGuids, tracking: true);
 
             if (products.Count != productGuids.Count)
                 throw new Exception("One or more products were not found.");
@@ -148,11 +138,11 @@ namespace WebAppAPI.Persistence.Services
             List<string> localImagePaths = GetLocalImagePathsForDeletion(productImageFiles);
 
             if (productImageFiles.Count > 0)
-                _fileWriteRepository.RemoveRange(productImageFiles.Cast<Domain.Entities.File>().ToList());
+                _fileWriteRepository.RemoveRange(productImageFiles.Cast<FileEntity>().ToList());
 
             _productWriteRepository.RemoveRange(products);
 
-            await _productWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             DeleteLocalPhysicalFiles(localImagePaths);
         }
@@ -165,7 +155,10 @@ namespace WebAppAPI.Persistence.Services
             if (files == null || files.Count == 0)
                 throw new Exception("At least one product image file is required.");
 
-            Product product = await _productReadRepository.GetByIdAsync(productId);
+            if (!Guid.TryParse(productId, out Guid productGuid))
+                throw new Exception("Product id is not valid.");
+
+            Product? product = await _productReadRepository.GetByIdAsync(productGuid, tracking: true);
 
             if (product == null)
                 throw new Exception("Product not found.");
@@ -183,7 +176,7 @@ namespace WebAppAPI.Persistence.Services
                 Product = new List<Product> { product }
             }).ToList());
 
-            await _productImageFileWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task ChangeCoverImageAsync(string productId, string imageId)
@@ -200,31 +193,19 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(imageId, out Guid imageGuid))
                 throw new Exception("Product image id is not valid.");
 
-            var query = _productImageFileWriteRepository.Table
-                .Include(p => p.Product)
-                .SelectMany(p => p.Product, (productImageFile, product) => new
-                {
-                    ProductImageFile = productImageFile,
-                    Product = product
-                });
-
-            var currentCoverImage = await query.FirstOrDefaultAsync(p =>
-                p.Product.Id == productGuid &&
-                p.ProductImageFile.CoverImage);
+            ProductImageFile? currentCoverImage = await _productImageFileReadRepository.GetCurrentCoverImageAsync(productGuid, tracking: true);
 
             if (currentCoverImage != null)
-                currentCoverImage.ProductImageFile.CoverImage = false;
+                currentCoverImage.CoverImage = false;
 
-            var selectedImage = await query.FirstOrDefaultAsync(p =>
-                p.Product.Id == productGuid &&
-                p.ProductImageFile.Id == imageGuid);
+            ProductImageFile? selectedImage = await _productImageFileReadRepository.GetByProductIdAndImageIdAsync(productGuid, imageGuid, tracking: true);
 
             if (selectedImage == null)
                 throw new Exception("Selected product image not found.");
 
-            selectedImage.ProductImageFile.CoverImage = true;
+            selectedImage.CoverImage = true;
 
-            await _productImageFileWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task RemoveProductImageAsync(string productId, string imageId)
@@ -241,9 +222,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(imageId, out Guid imageGuid))
                 throw new Exception("Product image id is not valid.");
 
-            Product? product = await _productReadRepository.Table
-                .Include(p => p.ProductImageFiles)
-                .FirstOrDefaultAsync(p => p.Id == productGuid);
+            Product? product = await _productReadRepository.GetByIdWithImagesAsync(productGuid, tracking: true);
 
             if (product == null)
                 throw new Exception("Product not found.");
@@ -258,7 +237,7 @@ namespace WebAppAPI.Persistence.Services
 
             _fileWriteRepository.Remove(productImageFile);
 
-            await _productWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             DeleteLocalPhysicalFiles(localImagePaths);
         }
@@ -271,14 +250,11 @@ namespace WebAppAPI.Persistence.Services
             if (size <= 0)
                 throw new Exception("Size must be greater than zero.");
 
-            var query = _productReadRepository.GetAll(false);
+            (List<Product> products, int totalCount) = await _productReadRepository.GetPagedWithImagesAsync(page, size);
 
-            var products = await query
-                .OrderByDescending(o => o.Price)
-                .Skip(page * size)
-                .Take(size)
-                .Include(i => i.ProductImageFiles)
-                .Select(p => new
+            return new()
+            {
+                Products = products.Select(p => new
                 {
                     p.Id,
                     p.Name,
@@ -289,14 +265,15 @@ namespace WebAppAPI.Persistence.Services
                     p.Title,
                     p.Description,
                     p.Rating,
-                    p.ProductImageFiles
-                })
-                .ToListAsync();
-
-            return new()
-            {
-                Products = products,
-                TotalProductCount = await query.CountAsync()
+                    ProductImageFiles = p.ProductImageFiles.Select(pif => new
+                    {
+                        pif.Id,
+                        pif.Path,
+                        pif.FileName,
+                        pif.CoverImage
+                    }).ToList()
+                }).ToList(),
+                TotalProductCount = totalCount
             };
         }
 
@@ -305,7 +282,10 @@ namespace WebAppAPI.Persistence.Services
             if (string.IsNullOrWhiteSpace(id))
                 throw new Exception("Product id is required.");
 
-            Product product = await _productReadRepository.GetByIdAsync(id, false);
+            if (!Guid.TryParse(id, out Guid productGuid))
+                throw new Exception("Product id is not valid.");
+
+            Product? product = await _productReadRepository.GetByIdAsync(productGuid, tracking: false);
 
             if (product == null)
                 throw new Exception("Product not found.");
@@ -329,9 +309,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(productId, out Guid productGuid))
                 throw new Exception("Product id is not valid.");
 
-            Product? product = await _productReadRepository.Table
-                .Include(p => p.ProductImageFiles)
-                .FirstOrDefaultAsync(p => p.Id == productGuid);
+            Product? product = await _productReadRepository.GetByIdWithImagesAsync(productGuid, tracking: false);
 
             if (product == null)
                 throw new Exception("Product not found.");
@@ -355,7 +333,10 @@ namespace WebAppAPI.Persistence.Services
             if (string.IsNullOrWhiteSpace(productId))
                 throw new Exception("Product id is required.");
 
-            Product product = await _productReadRepository.GetByIdAsync(productId);
+            if (!Guid.TryParse(productId, out Guid productGuid))
+                throw new Exception("Product id is not valid.");
+
+            Product? product = await _productReadRepository.GetByIdAsync(productGuid, tracking: false);
 
             if (product == null)
                 throw new Exception("Product not found.");

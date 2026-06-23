@@ -6,14 +6,9 @@ using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class RoleService : IRoleService
+    public class RoleService(RoleManager<AppRole> roleManager) : IRoleService
     {
-        readonly RoleManager<AppRole> _roleManager;
-
-        public RoleService(RoleManager<AppRole> roleManager)
-        {
-            _roleManager = roleManager;
-        }
+        private readonly RoleManager<AppRole> _roleManager = roleManager;
 
         public async Task<List<RoleGetDto>> GetRolesAsync()
         {

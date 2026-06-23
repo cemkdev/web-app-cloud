@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.DTOs;
@@ -11,45 +10,32 @@ using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class OrderService : IOrderService
+    public class OrderService(
+        IWriteRepository<Order> orderWriteRepository,
+        IOrderReadRepository orderReadRepository,
+        IOrderStatusHistoryReadRepository orderStatusHistoryReadRepository,
+        IWriteRepository<OrderStatusHistory> orderStatusHistoryWriteRepository,
+        IBasketReadRepository basketReadRepository,
+        IWriteRepository<Basket> basketWriteRepository,
+        IBasketItemReadRepository basketItemReadRepository,
+        IWriteRepository<BasketItem> basketItemWriteRepository,
+        IMailService mailService,
+        IOptions<BaseStorageOptions> baseStorageOptions,
+        IBasketService basketService,
+        IUnitOfWork unitOfWork) : IOrderService
     {
-        readonly IOrderWriteRepository _orderWriteRepository;
-        readonly IOrderReadRepository _orderReadRepository;
-        readonly IOrderStatusHistoryReadRepository _orderStatusHistoryReadRepository;
-        readonly IOrderStatusHistoryWriteRepository _orderStatusHistoryWriteRepository;
-        readonly IBasketReadRepository _basketReadRepository;
-        readonly IBasketWriteRepository _basketWriteRepository;
-        readonly IBasketItemReadRepository _basketItemReadRepository;
-        readonly IBasketItemWriteRepository _basketItemWriteRepository;
-        readonly IMailService _mailService;
-        readonly BaseStorageOptions _baseStorageOptions;
-        readonly IBasketService _basketService;
-
-        public OrderService(
-            IOrderWriteRepository orderWriteRepository,
-            IOrderReadRepository orderReadRepository,
-            IOrderStatusHistoryReadRepository orderStatusHistoryReadRepository,
-            IOrderStatusHistoryWriteRepository orderStatusHistoryWriteRepository,
-            IBasketReadRepository basketReadRepository,
-            IBasketWriteRepository basketWriteRepository,
-            IBasketItemReadRepository basketItemReadRepository,
-            IBasketItemWriteRepository basketItemWriteRepository,
-            IMailService mailService,
-            IOptions<BaseStorageOptions> baseStorageOptions,
-            IBasketService basketService)
-        {
-            _orderWriteRepository = orderWriteRepository;
-            _orderReadRepository = orderReadRepository;
-            _orderStatusHistoryReadRepository = orderStatusHistoryReadRepository;
-            _orderStatusHistoryWriteRepository = orderStatusHistoryWriteRepository;
-            _basketReadRepository = basketReadRepository;
-            _basketWriteRepository = basketWriteRepository;
-            _basketItemReadRepository = basketItemReadRepository;
-            _basketItemWriteRepository = basketItemWriteRepository;
-            _mailService = mailService;
-            _baseStorageOptions = baseStorageOptions.Value;
-            _basketService = basketService;
-        }
+        private readonly IWriteRepository<Order> _orderWriteRepository = orderWriteRepository;
+        private readonly IOrderReadRepository _orderReadRepository = orderReadRepository;
+        private readonly IOrderStatusHistoryReadRepository _orderStatusHistoryReadRepository = orderStatusHistoryReadRepository;
+        private readonly IWriteRepository<OrderStatusHistory> _orderStatusHistoryWriteRepository = orderStatusHistoryWriteRepository;
+        private readonly IBasketReadRepository _basketReadRepository = basketReadRepository;
+        private readonly IWriteRepository<Basket> _basketWriteRepository = basketWriteRepository;
+        private readonly IBasketItemReadRepository _basketItemReadRepository = basketItemReadRepository;
+        private readonly IWriteRepository<BasketItem> _basketItemWriteRepository = basketItemWriteRepository;
+        private readonly IMailService _mailService = mailService;
+        private readonly BaseStorageOptions _baseStorageOptions = baseStorageOptions.Value;
+        private readonly IBasketService _basketService = basketService;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
         public async Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder)
         {
@@ -68,7 +54,7 @@ namespace WebAppAPI.Persistence.Services
             };
 
             await _orderWriteRepository.AddAsync(order);
-            await _orderWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             string orderId = order.Id.ToString();
             await UpdateOrderStatusAsync(orderId, OrderStatusEnum.Pending);
@@ -78,17 +64,12 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task<ListOrder> GetAllOrdersAsync(int page, int size)
         {
-            var query = _orderReadRepository.Table
-                            .Include(o => o.Basket)
-                                .ThenInclude(b => b.BasketItems)
-                            .Include(o => o.Basket.User);
-
-            var dataPerPage = query.OrderBy(o => o.DateCreated).Skip(page * size).Take(size);
+            (List<Order> orders, int totalCount) = await _orderReadRepository.GetPagedWithBasketSummaryAsync(page, size);
 
             return new()
             {
-                TotalOrderCount = await query.CountAsync(),
-                Orders = await dataPerPage.Select(o => new
+                TotalOrderCount = totalCount,
+                Orders = orders.Select(o => new
                 {
                     Id = o.Id.ToString(),
                     OrderCode = o.OrderCode,
@@ -96,7 +77,7 @@ namespace WebAppAPI.Persistence.Services
                     TotalPrice = o.Basket.BasketItems.Sum(item => item.Product.Price * item.Quantity),
                     DateCreated = o.DateCreated,
                     StatusId = o.StatusId
-                }).ToListAsync()
+                }).ToList()
             };
         }
 
@@ -105,12 +86,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(id, out var orderGuid))
                 throw new Exception("Invalid order id.");
 
-            var order = await _orderReadRepository.Table
-                                .Include(o => o.Basket)
-                                    .ThenInclude(b => b.BasketItems)
-                                        .ThenInclude(bi => bi.Product)
-                                            .ThenInclude(p => p.ProductImageFiles)
-                                .FirstOrDefaultAsync(o => o.Id == orderGuid);
+            Order? order = await _orderReadRepository.GetDetailByIdAsync(orderGuid);
 
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
@@ -144,7 +120,10 @@ namespace WebAppAPI.Persistence.Services
 
         public async Task UpdateOrderStatusAsync(string orderId, OrderStatusEnum newStatus)
         {
-            Order order = await _orderReadRepository.GetByIdAsync(orderId);
+            if (!Guid.TryParse(orderId, out Guid orderGuid))
+                throw new Exception("Invalid order id.");
+
+            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, tracking: true);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
@@ -155,7 +134,7 @@ namespace WebAppAPI.Persistence.Services
                 if (!IsValidStatusTransition(currentStatus, newStatus))
                     throw new InvalidOperationException($"Order status can't transition from {currentStatus} to {newStatus}");
 
-                // Create OrderStatusHistory record
+                // Save the status history before applying the order status update.
                 var orderStatusHistory = new OrderStatusHistory
                 {
                     Id = Guid.NewGuid(),
@@ -165,16 +144,16 @@ namespace WebAppAPI.Persistence.Services
                     ChangedDate = DateTime.UtcNow
                 };
                 await _orderStatusHistoryWriteRepository.AddAsync(orderStatusHistory);
-                var historySaveResult = await _orderStatusHistoryWriteRepository.SaveAsync();
+                var historySaveResult = await _unitOfWork.SaveChangesAsync();
 
-                // If 'OrderStatusHistory' saving process is success.
+                // Continue only if the history record was persisted successfully.
                 if (historySaveResult > 0)
                 {
                     if (newStatus != currentStatus)
                     {
                         order.StatusId = (int)newStatus;
                         _orderWriteRepository.Update(order);
-                        await _orderWriteRepository.SaveAsync();
+                        await _unitOfWork.SaveChangesAsync();
                     }
 
                     UpdateOrderStatusMailDto mailData = await CreateOrderStatusMailObject(order.Id, newStatus, orderStatusHistory.ChangedDate);
@@ -185,7 +164,7 @@ namespace WebAppAPI.Persistence.Services
                     throw new Exception("Order status history could not be saved.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }
@@ -196,13 +175,11 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(orderId, out var orderGuid))
                 throw new Exception("Invalid order id.");
 
-            Order order = await _orderReadRepository.GetByIdAsync(orderGuid.ToString());
+            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, tracking: false);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
-            var statusHistoryList = await _orderStatusHistoryReadRepository
-                .GetWhere(os => os.OrderId == orderGuid)
-                .ToListAsync();
+            List<OrderStatusHistory> statusHistoryList = await _orderStatusHistoryReadRepository.GetByOrderIdAsync(orderGuid);
 
             return new OrderStatusHistoryDto
             {
@@ -221,7 +198,7 @@ namespace WebAppAPI.Persistence.Services
                 throw new Exception("Invalid order id.");
 
             await DeleteOrderAggregateAsync(orderId);
-            await _orderWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task DeleteRangeOrderAsync(IEnumerable<string> ids)
@@ -233,14 +210,13 @@ namespace WebAppAPI.Persistence.Services
 
                 await DeleteOrderAggregateAsync(orderId);
             }
-            await _orderWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         #region Helpers - Methods
         private async Task EnsureBasketHasItemsAsync(Guid basketId)
         {
-            bool hasBasketItems = await _basketItemReadRepository.Table
-                .AnyAsync(bi => bi.BasketId == basketId);
+            bool hasBasketItems = await _basketItemReadRepository.AnyByBasketIdAsync(basketId);
 
             if (!hasBasketItems)
                 throw new Exception("Cannot create an order from an empty basket.");
@@ -248,24 +224,20 @@ namespace WebAppAPI.Persistence.Services
 
         private async Task DeleteOrderAggregateAsync(Guid orderId)
         {
-            var order = await _orderReadRepository.GetByIdAsync(orderId.ToString());
+            Order? order = await _orderReadRepository.GetByIdAsync(orderId, tracking: true);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
-            var basket = await _basketReadRepository.GetByIdAsync(orderId.ToString());
+            Basket? basket = await _basketReadRepository.GetByIdAsync(orderId, tracking: true);
             if (basket == null)
                 throw new Exception("A Basket with the specified ID could not be found.");
 
-            var statusHistories = await _orderStatusHistoryReadRepository
-                .GetWhere(sh => sh.OrderId == orderId)
-                .ToListAsync();
+            List<OrderStatusHistory> statusHistories = await _orderStatusHistoryReadRepository.GetByOrderIdAsync(orderId, tracking: true);
 
             if (statusHistories.Count > 0)
                 _orderStatusHistoryWriteRepository.RemoveRange(statusHistories);
 
-            var basketItems = await _basketItemReadRepository
-                .GetWhere(bi => bi.BasketId == orderId)
-                .ToListAsync();
+            List<BasketItem> basketItems = await _basketItemReadRepository.GetByBasketIdAsync(orderId, tracking: true);
             if (basketItems.Count > 0)
                 _basketItemWriteRepository.RemoveRange(basketItems);
 
@@ -282,10 +254,6 @@ namespace WebAppAPI.Persistence.Services
             long positive10Digit = Math.Abs(randomNumber % 9_000_000_000L) + 1_000_000_000L;
             string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
 
-            // String Interpolation - (It is enough for this app.)
-            //return $"ORD_{positive10Digit}_{timestamp}";
-
-            // string.Create() - more memory-friendly string concatenation.(If necessary...)
             return string.Create(
                 4 + 10 + 1 + 12, // "ORD_" + 10 digits + "_" + timestamp (yyyyMMddHHmm)
                 (positive10Digit, timestamp),
@@ -323,10 +291,7 @@ namespace WebAppAPI.Persistence.Services
 
         private async Task<UpdateOrderStatusMailDto> CreateOrderStatusMailObject(Guid orderId, OrderStatusEnum newStatus, DateTime changedDate)
         {
-            var orderData = await _orderReadRepository.Table
-                                        .Include(o => o.Basket)
-                                            .ThenInclude(b => b.User)
-                                        .FirstOrDefaultAsync(o => o.Id == orderId);
+            Order? orderData = await _orderReadRepository.GetWithBasketUserAsync(orderId);
 
             if (orderData?.Basket?.User == null)
                 throw new Exception("Order's Basket or User data could not be loaded.");

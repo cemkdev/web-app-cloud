@@ -1,10 +1,12 @@
 ﻿using E = WebAppAPI.Domain.Entities;
 
-// (!) We encountered name conflicts in the namespaces while providing the entity name to IReadRepository here.
-// Therefore, the folder structure will have separate folders for the entity repositories in the file organization, but we will define their namespaces as shown below.
 namespace WebAppAPI.Application.Repositories
 {
     public interface IBasketItemReadRepository : IReadRepository<E.BasketItem>
     {
+        Task<E.BasketItem?> GetByBasketAndProductAsync(Guid basketId, Guid productId, bool tracking = true);
+        Task<E.BasketItem?> GetByIdAndBasketAsync(Guid basketItemId, Guid basketId, bool tracking = true);
+        Task<List<E.BasketItem>> GetByBasketIdAsync(Guid basketId, bool tracking = false);
+        Task<bool> AnyByBasketIdAsync(Guid basketId);
     }
 }

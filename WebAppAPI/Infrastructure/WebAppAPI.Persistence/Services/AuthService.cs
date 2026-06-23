@@ -16,45 +16,28 @@ using U = WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService(
+        IHttpClientFactory httpClientFactory,
+        UserManager<U.AppUser> userManager,
+        ITokenHandler tokenHandler,
+        SignInManager<U.AppUser> signInManager,
+        IUserService userService,
+        IMailService mailService,
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<TokenExpirationOptions> tokenExpirationOptions,
+        IOptions<AuthCookieOptions> authCookieOptions,
+        IOptions<ExternalLoginOptions> externalLoginOptions) : IAuthService
     {
-        readonly HttpClient _httpClient;
-        readonly UserManager<U.AppUser> _userManager;
-        readonly ITokenHandler _tokenHandler;
-        readonly SignInManager<U.AppUser> _signInManager;
-        readonly IUserService _userService;
-        readonly IMailService _mailService;
-        IHttpContextAccessor _httpContextAccessor;
-        readonly IRoleService _roleService; // TODO: Bu burada kullanılmıyor gözüküyor, rengi şeffaf gri oradan anladım. Gereksiz inject edilmiş olabilir. Buna komple kod refactor adımlarında bakılsın.
-        private readonly TokenExpirationOptions _tokenExpirationOptions;
-        private readonly AuthCookieOptions _authCookieOptions;
-        private readonly ExternalLoginOptions _externalLoginOptions;
-
-        public AuthService(
-            IHttpClientFactory httpClientFactory,
-            UserManager<U.AppUser> userManager,
-            ITokenHandler tokenHandler,
-            SignInManager<U.AppUser> signInManager,
-            IUserService userService,
-            IMailService mailService,
-            IHttpContextAccessor httpContextAccessor,
-            IRoleService roleService,
-            IOptions<TokenExpirationOptions> tokenExpirationOptions,
-            IOptions<AuthCookieOptions> authCookieOptions,
-            IOptions<ExternalLoginOptions> externalLoginOptions)
-        {
-            _httpClient = httpClientFactory.CreateClient();
-            _userManager = userManager;
-            _tokenHandler = tokenHandler;
-            _signInManager = signInManager;
-            _userService = userService;
-            _mailService = mailService;
-            _httpContextAccessor = httpContextAccessor;
-            _roleService = roleService;
-            _tokenExpirationOptions = tokenExpirationOptions.Value;
-            _authCookieOptions = authCookieOptions.Value;
-            _externalLoginOptions = externalLoginOptions.Value;
-        }
+        readonly HttpClient _httpClient = httpClientFactory.CreateClient();
+        readonly UserManager<U.AppUser> _userManager = userManager;
+        readonly ITokenHandler _tokenHandler = tokenHandler;
+        readonly SignInManager<U.AppUser> _signInManager = signInManager;
+        readonly IUserService _userService = userService;
+        readonly IMailService _mailService = mailService;
+        IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+        private readonly TokenExpirationOptions _tokenExpirationOptions = tokenExpirationOptions.Value;
+        private readonly AuthCookieOptions _authCookieOptions = authCookieOptions.Value;
+        private readonly ExternalLoginOptions _externalLoginOptions = externalLoginOptions.Value;
 
         #region Internal Login
         public async Task<Token> LoginAsync(string usernameOrEmail, string password)
@@ -70,7 +53,7 @@ namespace WebAppAPI.Persistence.Services
                 throw new UserLockedOutException();
 
             SignInResult result = await _signInManager.CheckPasswordSignInAsync(user, password, false);
-            if (result.Succeeded) // Authentication succeeded!
+            if (result.Succeeded)
             {
                 await _userManager.ResetAccessFailedCountAsync(user);
 
@@ -78,7 +61,6 @@ namespace WebAppAPI.Persistence.Services
                 string refreshToken = _tokenHandler.CreateRefreshToken();
                 await _userService.UpdateRefreshTokenAsync(user, refreshToken, _tokenExpirationOptions.RefreshToken);
 
-                // We're sending the access token as an HttpOnly cookie.
                 SetHttpOnlyAccessTokenCookie(token);
 
                 return token;
@@ -195,10 +177,7 @@ namespace WebAppAPI.Persistence.Services
             DateTime expirationDate = DateTime.MinValue;
 
             if (expirationClaim != null && long.TryParse(expirationClaim, out var expUnix))
-            {
-                // Convert Unix timestamp to DateTime.
                 expirationDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-            }
 
             string refreshBeforeTime = _tokenExpirationOptions.RefreshBeforeTime.ToString();
 
@@ -254,7 +233,7 @@ namespace WebAppAPI.Persistence.Services
             if (string.IsNullOrEmpty(accessToken))
                 throw new AuthenticationFailedException();
 
-            // Even if the token has expired, let's extract the username.
+            // Extract username from an expired access token for logout cleanup.
             var username = _tokenHandler.GetUsernameFromExpiredToken(accessToken);
             if (string.IsNullOrEmpty(username))
                 throw new AuthenticationFailedException("User info could not be extracted from token.");
@@ -301,13 +280,12 @@ namespace WebAppAPI.Persistence.Services
                 if (await _userManager.IsLockedOutAsync(user))
                     throw new UserLockedOutException();
 
-                await _userManager.AddLoginAsync(user, info); //AspNetUserLogins                    
+                await _userManager.AddLoginAsync(user, info);
 
                 Token token = _tokenHandler.CreateAccessToken(user);
                 string refreshToken = _tokenHandler.CreateRefreshToken();
                 await _userService.UpdateRefreshTokenAsync(user, refreshToken, _tokenExpirationOptions.RefreshToken);
 
-                // We're sending the access token as an HttpOnly cookie.
                 SetHttpOnlyAccessTokenCookie(token);
 
                 return token;
@@ -338,16 +316,15 @@ namespace WebAppAPI.Persistence.Services
                 throw new AuthenticationFailedException();
         }
 
-        // Sending the token as an HttpOnly cookie.
         private void SetHttpOnlyAccessTokenCookie(Token token)
         {
             _httpContextAccessor.HttpContext.Response.Cookies.Append("accessToken", token.AccessToken, new CookieOptions
             {
-                HttpOnly = true, // Prevents JavaScript access.
-                Secure = _authCookieOptions.Secure, // If true, the cookie will only be sent over HTTPS.
-                Expires = token.Expiration, // Token's expiration time.
-                SameSite = SameSiteMode.Strict, // To prevent CSRF.
-                Path = "/" // It's only valid for the relevant path.
+                HttpOnly = true,
+                Secure = _authCookieOptions.Secure,
+                Expires = token.Expiration,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
             });
         }
 

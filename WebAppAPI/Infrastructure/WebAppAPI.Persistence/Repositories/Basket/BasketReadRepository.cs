@@ -1,19 +1,18 @@
-﻿using WebAppAPI.Application.Repositories;
+﻿using Microsoft.EntityFrameworkCore;
+using WebAppAPI.Application.Repositories;
 using WebAppAPI.Persistence.Contexts;
 using E = WebAppAPI.Domain.Entities;
 
-// (!) We encountered name conflicts in the namespaces while providing the entity name to IReadRepository here.
-// Therefore, the folder structure will have separate folders for the entity repositories in the file organization, but we will define their namespaces as shown below.
 namespace WebAppAPI.Persistence.Repositories
 {
-    // This is why we implemented the ICustomerReadRepository interface;
-    // - When requesting via DI, we will recieve it with ICustomerReadRepository.
-    // - Additionally, ICustomerReadRepository is the signature of this class, and ReadRepository<Customer> is its implementation.
-    public class BasketReadRepository : ReadRepository<E.Basket>, IBasketReadRepository
+    public class BasketReadRepository(WebAppAPIDbContext context)
+        : ReadRepository<E.Basket>(context), IBasketReadRepository
     {
-        // The base constructor expects a parameter.
-        public BasketReadRepository(WebAppAPIDbContext context) : base(context)
-        {
-        }
+        public Task<E.Basket?> GetWithItemsAndProductImagesAsync(Guid basketId, bool tracking = false)
+            => Query(tracking)
+                .Include(b => b.BasketItems)
+                    .ThenInclude(bi => bi.Product)
+                        .ThenInclude(p => p.ProductImageFiles)
+                .FirstOrDefaultAsync(b => b.Id == basketId);
     }
 }

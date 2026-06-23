@@ -7,37 +7,27 @@ using WebAppAPI.Application.Exceptions;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Entities.Identity;
-using C = WebAppAPI.Application.DTOs.Configuration;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class EndpointService : IEndpointService
+    public class EndpointService(
+        IApplicationService applicationService,
+        IMenuReadRepository menuReadRepository,
+        IWriteRepository<Menu> menuWriteRepository,
+        IEndpointReadRepository endpointReadRepository,
+        IWriteRepository<Endpoint> endpointWriteRepository,
+        RoleManager<AppRole> roleManager,
+        UserManager<AppUser> userManager,
+        IUnitOfWork unitOfWork) : IEndpointService
     {
-        readonly IApplicationService _applicationService;
-        readonly IMenuReadRepository _menuReadRepository;
-        readonly IMenuWriteRepository _menuWriteRepository;
-        readonly IEndpointReadRepository _endpointReadRepository;
-        readonly IEndpointWriteRepository _endpointWriteRepository;
-        readonly RoleManager<AppRole> _roleManager;
-        readonly UserManager<AppUser> _userManager;
-
-        public EndpointService(
-            IApplicationService applicationService,
-            IMenuReadRepository menuReadRepository,
-            IMenuWriteRepository menuWriteRepository,
-            IEndpointReadRepository endpointReadRepository,
-            IEndpointWriteRepository endpointWriteRepository,
-            RoleManager<AppRole> roleManager,
-            UserManager<AppUser> userManager)
-        {
-            _applicationService = applicationService;
-            _menuReadRepository = menuReadRepository;
-            _menuWriteRepository = menuWriteRepository;
-            _endpointReadRepository = endpointReadRepository;
-            _endpointWriteRepository = endpointWriteRepository;
-            _roleManager = roleManager;
-            _userManager = userManager;
-        }
+        private readonly IApplicationService _applicationService = applicationService;
+        private readonly IMenuReadRepository _menuReadRepository = menuReadRepository;
+        private readonly IWriteRepository<Menu> _menuWriteRepository = menuWriteRepository;
+        private readonly IEndpointReadRepository _endpointReadRepository = endpointReadRepository;
+        private readonly IWriteRepository<Endpoint> _endpointWriteRepository = endpointWriteRepository;
+        private readonly RoleManager<AppRole> _roleManager = roleManager;
+        private readonly UserManager<AppUser> _userManager = userManager;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
         public async Task<List<RolesEndpointsDto>> GetRolesEndpointsAsync()
         {
@@ -45,10 +35,7 @@ namespace WebAppAPI.Persistence.Services
                                 .Include(r => r.Endpoints)
                                 .ToListAsync();
 
-            var endpoints = await _endpointReadRepository.Table
-                                    .Include(e => e.Menu)
-                                    .Include(e => e.Roles)
-                                    .ToListAsync();
+            List<Endpoint> endpoints = await _endpointReadRepository.GetAllWithMenuAndRolesAsync();
 
             var rolesEndpoints = new List<RolesEndpointsDto>();
 
@@ -76,12 +63,10 @@ namespace WebAppAPI.Persistence.Services
             return rolesEndpoints;
         }
 
-        public async Task AssignRoleToEndpointsAsync(List<RolesEndpointsDto> rolesEndpoints, Type type) // We're getting all roles and endpoints from the client.
+        public async Task AssignRoleToEndpointsAsync(List<RolesEndpointsDto> rolesEndpoints, Type type)
         {
-            var menus = await _menuReadRepository.GetAll().ToListAsync();
-            var endpoints = await _endpointReadRepository.Table
-                                    .Include(e => e.Menu)
-                                    .Include(e => e.Roles).ToListAsync();
+            List<Menu> menus = await _menuReadRepository.GetAllMenusAsync();
+            List<Endpoint> endpoints = await _endpointReadRepository.GetAllWithMenuAndRolesAsync();
             var roles = await _roleManager.Roles
                                     .Include(r => r.Endpoints).ToListAsync();
 
@@ -92,14 +77,16 @@ namespace WebAppAPI.Persistence.Services
                 foreach (var roleEndpoint in roleEndpoints.RoleEndpoints)
                 {
                     Menu? menu = menus.FirstOrDefault(m => m.Name == roleEndpoint.MenuName);
-                    if (menu == null) // If the menu doesn't exist in the database, it's added.
+
+                    // Create the menu metadata if it does not exist yet.
+                    if (menu == null)
                     {
                         menu = new()
                         {
                             Name = roleEndpoint.MenuName
                         };
                         await _menuWriteRepository.AddAsync(menu);
-                        await _menuWriteRepository.SaveAsync();
+                        await _unitOfWork.SaveChangesAsync();
                         menus.Add(menu);
                     }
 
@@ -108,10 +95,9 @@ namespace WebAppAPI.Persistence.Services
                                                 .FirstOrDefault(menu => menu.Name == roleEndpoint.MenuName)?
                                                 .Actions.FirstOrDefault(a => a.Code == roleEndpoint.EndpointCode);
 
-                    if (endpoint == null) // If the endpoint doesn't exist in the database, it's added.
+                    // Create the endpoint metadata if it does not exist yet.
+                    if (endpoint == null)
                     {
-
-
                         endpoint = new()
                         {
                             ActionType = action.ActionType.ToString(),
@@ -123,10 +109,10 @@ namespace WebAppAPI.Persistence.Services
                         };
 
                         await _endpointWriteRepository.AddAsync(endpoint);
-                        await _endpointWriteRepository.SaveAsync();
+                        await _unitOfWork.SaveChangesAsync();
                         endpoints.Add(endpoint);
                     }
-                    else // If the endpoint exists, check for changes and update if necessary.
+                    else // Keep existing endpoint metadata in sync with the current authorization definition.
                     {
                         var updated = false;
 
@@ -159,7 +145,7 @@ namespace WebAppAPI.Persistence.Services
                             _endpointWriteRepository.Update(endpoint);
                         }
                     }
-                    // Set the endpoint-role relationship.
+                    // Sync the endpoint-role relationship.
                     bool hasPermission = endpoint.Roles.Any(r => r.Id == role.Id);
 
                     if (roleEndpoint.IsAuthorized && !hasPermission)
@@ -172,14 +158,13 @@ namespace WebAppAPI.Persistence.Services
                     }
                 }
             }
-            await _endpointWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<bool> HasAccessToMenuAsync(string username, string menuName)
         {
             var filteredEndpointsByUserRoles = await FilteredEndpointsByUserRolesAsync(username);
 
-            // Check endpoint access
             foreach (var role in filteredEndpointsByUserRoles)
             {
                 foreach (var endpoint in role.RoleEndpoints)
@@ -197,7 +182,6 @@ namespace WebAppAPI.Persistence.Services
 
             var accessibleMenus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Check endpoints' accesses
             foreach (var role in filteredEndpointsByUserRoles)
             {
                 foreach (var endpoint in role.RoleEndpoints)
@@ -220,7 +204,6 @@ namespace WebAppAPI.Persistence.Services
 
             var allRolesEndpoints = await GetRolesEndpointsAsync();
 
-            // Filter endpoints according to current user's roles
             var userRolesEndpoints = allRolesEndpoints
                                         .Where(r => userRoleNames.Any(roleName => _roleManager.Roles.Any(dbRole => dbRole.Id == r.RoleId && dbRole.Name == roleName)))
                                         .ToList();

@@ -5,46 +5,18 @@ using WebAppAPI.Persistence.Contexts;
 
 namespace WebAppAPI.Persistence.Repositories
 {
-    public class ReadRepository<T> : IReadRepository<T> where T : BaseEntity
+    public class ReadRepository<T>(WebAppAPIDbContext context) : IReadRepository<T> where T : BaseEntity
     {
-        private readonly WebAppAPIDbContext _context;
-        public ReadRepository(WebAppAPIDbContext context)
+        protected DbSet<T> Set => context.Set<T>();
+
+        protected IQueryable<T> Query(bool tracking = false)
         {
-            _context = context;
+            IQueryable<T> query = Set;
+
+            return tracking ? query : query.AsNoTracking();
         }
 
-        public DbSet<T> Table => _context.Set<T>();
-
-        public IQueryable<T> GetAll(bool tracking = true)
-        {
-            var query = Table.AsQueryable();
-            if (!tracking)
-                query = query.AsNoTracking();
-            return query;
-        }
-
-        public IQueryable<T> GetWhere(System.Linq.Expressions.Expression<Func<T, bool>> method, bool tracking = true)
-        {
-            var query = Table.Where(method);
-            if (!tracking)
-                query = query.AsNoTracking();
-            return query;
-        }
-
-        public async Task<T> GetSingleAsync(System.Linq.Expressions.Expression<Func<T, bool>> method, bool tracking = true)
-        {
-            var query = Table.AsQueryable();
-            if (!tracking)
-                query = query.AsNoTracking();
-            return await query.FirstOrDefaultAsync(method);
-        }
-
-        public async Task<T> GetByIdAsync(string id, bool tracking = true)
-        {
-            var query = Table.AsQueryable();
-            if (!tracking)
-                query = query.AsNoTracking();
-            return await query.FirstOrDefaultAsync(data => data.Id == Guid.Parse(id)); // There is no Find() method in IQueryable.
-        }
+        public async Task<T?> GetByIdAsync(Guid id, bool tracking = false)
+            => await Query(tracking).FirstOrDefaultAsync(data => data.Id == id);
     }
 }

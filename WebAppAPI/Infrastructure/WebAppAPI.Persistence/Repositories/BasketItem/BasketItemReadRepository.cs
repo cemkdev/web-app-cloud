@@ -1,19 +1,28 @@
-﻿using WebAppAPI.Application.Repositories;
+﻿using Microsoft.EntityFrameworkCore;
+using WebAppAPI.Application.Repositories;
 using WebAppAPI.Persistence.Contexts;
 using E = WebAppAPI.Domain.Entities;
 
-// (!) We encountered name conflicts in the namespaces while providing the entity name to IReadRepository here.
-// Therefore, the folder structure will have separate folders for the entity repositories in the file organization, but we will define their namespaces as shown below.
 namespace WebAppAPI.Persistence.Repositories
 {
-    // This is why we implemented the ICustomerReadRepository interface;
-    // - When requesting via DI, we will recieve it with ICustomerReadRepository.
-    // - Additionally, ICustomerReadRepository is the signature of this class, and ReadRepository<Customer> is its implementation.
-    public class BasketItemReadRepository : ReadRepository<E.BasketItem>, IBasketItemReadRepository
+    public class BasketItemReadRepository(WebAppAPIDbContext context)
+        : ReadRepository<E.BasketItem>(context), IBasketItemReadRepository
     {
-        // The base constructor expects a parameter.
-        public BasketItemReadRepository(WebAppAPIDbContext context) : base(context)
-        {
-        }
+        public Task<E.BasketItem?> GetByBasketAndProductAsync(Guid basketId, Guid productId, bool tracking = true)
+            => Query(tracking)
+                .FirstOrDefaultAsync(bi => bi.BasketId == basketId && bi.ProductId == productId);
+
+        public Task<E.BasketItem?> GetByIdAndBasketAsync(Guid basketItemId, Guid basketId, bool tracking = true)
+            => Query(tracking)
+                .Include(bi => bi.Product)
+                .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.BasketId == basketId);
+
+        public Task<List<E.BasketItem>> GetByBasketIdAsync(Guid basketId, bool tracking = false)
+            => Query(tracking)
+                .Where(bi => bi.BasketId == basketId)
+                .ToListAsync();
+
+        public Task<bool> AnyByBasketIdAsync(Guid basketId)
+            => Query(false).AnyAsync(bi => bi.BasketId == basketId);
     }
 }

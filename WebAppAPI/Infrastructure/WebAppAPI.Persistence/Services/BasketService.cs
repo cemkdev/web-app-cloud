@@ -9,51 +9,43 @@ using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class BasketService : IBasketService
+    public class BasketService(
+        IHttpContextAccessor httpContextAccessor,
+        UserManager<AppUser> userManager,
+        IOrderReadRepository orderReadRepository,
+        IBasketReadRepository basketReadRepository,
+        IBasketItemReadRepository basketItemReadRepository,
+        IWriteRepository<BasketItem> basketItemWriteRepository,
+        IUnitOfWork unitOfWork) : IBasketService
     {
-        readonly IHttpContextAccessor _httpContextAccessor;
-        readonly UserManager<AppUser> _userManager;
-        readonly IOrderReadRepository _orderReadRepository;
-        readonly IBasketWriteRepository _basketWriteRepository;
-        readonly IBasketReadRepository _basketReadRepository;
-        readonly IBasketItemReadRepository _basketItemReadRepository;
-        readonly IBasketItemWriteRepository _basketItemWriteRepository;
-
-        public BasketService(
-            IHttpContextAccessor httpContextAccessor,
-            UserManager<AppUser> userManager,
-            IOrderReadRepository orderReadRepository,
-            IBasketReadRepository basketReadRepository,
-            IBasketWriteRepository basketWriteRepository,
-            IBasketItemReadRepository basketItemReadRepository,
-            IBasketItemWriteRepository basketItemWriteRepository)
-        {
-            _httpContextAccessor = httpContextAccessor;
-            _userManager = userManager;
-            _orderReadRepository = orderReadRepository;
-            _basketReadRepository = basketReadRepository;
-            _basketWriteRepository = basketWriteRepository;
-            _basketItemReadRepository = basketItemReadRepository;
-            _basketItemWriteRepository = basketItemWriteRepository;
-        }
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+        private readonly UserManager<AppUser> _userManager = userManager;
+        private readonly IOrderReadRepository _orderReadRepository = orderReadRepository;
+        private readonly IBasketReadRepository _basketReadRepository = basketReadRepository;
+        private readonly IBasketItemReadRepository _basketItemReadRepository = basketItemReadRepository;
+        private readonly IWriteRepository<BasketItem> _basketItemWriteRepository = basketItemWriteRepository;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
         public async Task AddItemToBasketAsync(VM_Create_BasketItem basketItem)
         {
             Basket? basket = await ContextUser(createIfNotExists: true);
             if (basket != null)
             {
-                BasketItem _basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.BasketId == basket.Id && bi.ProductId == Guid.Parse(basketItem.ProductId));
-                if (_basketItem != null)
-                    _basketItem.Quantity++;
+                if (string.IsNullOrWhiteSpace(basketItem.ProductId) || !Guid.TryParse(basketItem.ProductId, out Guid productGuid))
+                    throw new Exception("Product id is not valid.");
+
+                BasketItem? existingBasketItem = await _basketItemReadRepository.GetByBasketAndProductAsync(basket.Id, productGuid, tracking: true);
+                if (existingBasketItem != null)
+                    existingBasketItem.Quantity++;
                 else
                     await _basketItemWriteRepository.AddAsync(new()
                     {
                         BasketId = basket.Id,
-                        ProductId = Guid.Parse(basketItem.ProductId),
+                        ProductId = productGuid,
                         Quantity = basketItem.Quantity
                     });
 
-                await _basketItemWriteRepository.SaveAsync();
+                await _unitOfWork.SaveChangesAsync();
             }
         }
 
@@ -63,11 +55,7 @@ namespace WebAppAPI.Persistence.Services
             if (basket == null)
                 return new();
 
-            Basket? result = await _basketReadRepository.Table
-                                   .Include(bi => bi.BasketItems)
-                                   .ThenInclude(p => p.Product)
-                                   .ThenInclude(pi => pi.ProductImageFiles)
-                                   .FirstOrDefaultAsync(b => b.Id == basket.Id);
+            Basket? result = await _basketReadRepository.GetWithItemsAndProductImagesAsync(basket.Id);
 
             return result?.BasketItems.OrderBy(bi => bi.DateCreated).ToList() ?? new();
         }
@@ -86,11 +74,11 @@ namespace WebAppAPI.Persistence.Services
             if (basket == null)
                 return;
 
-            BasketItem? basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
+            BasketItem? basketItem = await _basketItemReadRepository.GetByIdAndBasketAsync(basketItemGuid, basket.Id, tracking: true);
             if (basketItem != null)
             {
                 _basketItemWriteRepository.Remove(basketItem);
-                await _basketItemWriteRepository.SaveAsync();
+                await _unitOfWork.SaveChangesAsync();
             }
         }
 
@@ -102,9 +90,7 @@ namespace WebAppAPI.Persistence.Services
 
             if (basket == null) return;
 
-            BasketItem? currentBasketItem = await _basketItemReadRepository.Table
-                                                    .Include(bi => bi.Product)
-                                                    .FirstOrDefaultAsync(bi => bi.Id == basketItemGuid && bi.BasketId == basket.Id);
+            BasketItem? currentBasketItem = await _basketItemReadRepository.GetByIdAndBasketAsync(basketItemGuid, basket.Id, tracking: true);
 
             if (currentBasketItem == null) return;
 
@@ -115,7 +101,7 @@ namespace WebAppAPI.Persistence.Services
                 throw new Exception("Quantity exceeds available stock.");
 
             currentBasketItem.Quantity = basketItem.Quantity;
-            await _basketItemWriteRepository.SaveAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         #region Helpers
@@ -129,24 +115,24 @@ namespace WebAppAPI.Persistence.Services
                                         .Include(b => b.Baskets)
                                         .FirstOrDefaultAsync(u => u.UserName == username);
 
-                var _basket = from basket in user?.Baskets
-                              join order in _orderReadRepository.Table
-                              on basket.Id equals order.Id into BasketOrder
-                              from order in BasketOrder.DefaultIfEmpty()
-                              select new
-                              {
-                                  Basket = basket,
-                                  Order = order
-                              };
-
                 Basket? targetBasket = null;
-                if (_basket.Any(o => o.Order is null))
-                    targetBasket = _basket.FirstOrDefault(o => o.Order is null)?.Basket;
-                else if (createIfNotExists)
+                if (user?.Baskets != null)
+                {
+                    foreach (Basket basket in user.Baskets)
+                    {
+                        if (!await _orderReadRepository.HasOrderForBasketAsync(basket.Id))
+                        {
+                            targetBasket = basket;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetBasket == null && createIfNotExists)
                 {
                     targetBasket = new();
-                    user.Baskets.Add(targetBasket);
-                    await _basketWriteRepository.SaveAsync();
+                    user!.Baskets.Add(targetBasket);
+                    await _unitOfWork.SaveChangesAsync();
                 }
 
                 return targetBasket;

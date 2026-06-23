@@ -11,18 +11,14 @@ using U = WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class UserService : IUserService
+    public class UserService(
+        UserManager<U.AppUser> userManager,
+        IEndpointReadRepository endpointReadRepository,
+        RoleManager<AppRole> roleManager) : IUserService
     {
-        readonly UserManager<U.AppUser> _userManager;
-        readonly IEndpointReadRepository _endpointReadRepository;
-        readonly RoleManager<AppRole> _roleManager;
-
-        public UserService(UserManager<U.AppUser> userManager, IEndpointReadRepository endpointReadRepository, RoleManager<AppRole> roleManager)
-        {
-            _userManager = userManager;
-            _endpointReadRepository = endpointReadRepository;
-            _roleManager = roleManager;
-        }
+        private readonly UserManager<U.AppUser> _userManager = userManager;
+        private readonly IEndpointReadRepository _endpointReadRepository = endpointReadRepository;
+        private readonly RoleManager<AppRole> _roleManager = roleManager;
 
         public async Task<ListUserDto> GetAllUsersAsync(int page, int size)
         {
@@ -80,7 +76,7 @@ namespace WebAppAPI.Persistence.Services
         {
             if (user != null)
             {
-                if (isLogout) // comes from AuthService->Logout()
+                if (isLogout) // Clear refresh token during logout.
                 {
                     user.RefreshToken = null;
                     user.RefreshTokenEndDate = refreshTokenExpiration == 0 ? null : DateTime.UtcNow.AddSeconds(refreshTokenExpiration);
@@ -89,7 +85,7 @@ namespace WebAppAPI.Persistence.Services
                 else
                 {
                     user.RefreshToken = refreshToken;
-                    if (!isFromRefreshToken) // comes from AuthService->RefreshTokenLoginAsync()
+                    if (!isFromRefreshToken) // Keep the existing refresh token expiration during silent refresh.
                         user.RefreshTokenEndDate = DateTime.UtcNow.AddSeconds(refreshTokenExpiration);
                     await _userManager.UpdateAsync(user);
                 }
@@ -150,9 +146,7 @@ namespace WebAppAPI.Persistence.Services
             if (!userRoles.Any())
                 return false;
 
-            Endpoint? endpoint = await _endpointReadRepository.Table
-                                        .Include(end => end.Roles)
-                                        .FirstOrDefaultAsync(role => role.Code == code);
+            Endpoint? endpoint = await _endpointReadRepository.GetByCodeWithMenuAsync(code);
 
             if (endpoint == null)
                 return false;
