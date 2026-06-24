@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
-using WebAppAPI.Application.Features.Commands.Basket.AddItemToBasket;
-using WebAppAPI.Application.Features.Commands.Basket.RemoveBasketItem;
-using WebAppAPI.Application.Features.Commands.Basket.UpdateQuantity;
-using WebAppAPI.Application.Features.Queries.Basket.GetAllBasketItems;
 using WebAppAPI.Application.Enums;
 using WebAppAPI.Domain.Constants;
+using WebAppAPI.Application.Features.Baskets.Commands.RemoveBasketItem;
+using WebAppAPI.Application.Features.Baskets.Commands.UpdateQuantity;
+using WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket;
+using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
 
 namespace WebAppAPI.API.Controllers
 {

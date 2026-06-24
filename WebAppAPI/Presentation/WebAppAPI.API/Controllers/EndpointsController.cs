@@ -6,8 +6,8 @@ using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
-using WebAppAPI.Application.Features.Commands.Endpoint.AssignRoleEndpoint;
-using WebAppAPI.Application.Features.Queries.Endpoint.GetRolesEndpoints;
+using WebAppAPI.Application.Features.Endpoints.Commands.AssignRoleEndpoint;
+using WebAppAPI.Application.Features.Endpoints.Queries.GetRolesEndpoints;
 using WebAppAPI.Domain.Constants;
 using WebAppAPI.Domain.Entities.Identity;
 

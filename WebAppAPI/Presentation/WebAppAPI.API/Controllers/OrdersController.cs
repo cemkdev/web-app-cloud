@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
-using WebAppAPI.Application.Features.Commands.Order.CreateOrder;
-using WebAppAPI.Application.Features.Commands.Order.RemoveOrder;
-using WebAppAPI.Application.Features.Commands.Order.RemoveRangeOrder;
-using WebAppAPI.Application.Features.Commands.Order.UpdateStatus;
-using WebAppAPI.Application.Features.Queries.Order.GetAllOrders;
-using WebAppAPI.Application.Features.Queries.Order.GetOrderById;
-using WebAppAPI.Application.Features.Queries.Order.GetOrderStatusHistoryById;
+using WebAppAPI.Application.Features.Orders.Commands.CreateOrder;
+using WebAppAPI.Application.Features.Orders.Commands.RemoveOrder;
+using WebAppAPI.Application.Features.Orders.Commands.RemoveRangeOrder;
+using WebAppAPI.Application.Features.Orders.Commands.UpdateStatus;
+using WebAppAPI.Application.Features.Orders.Queries.GetAllOrders;
+using WebAppAPI.Application.Features.Orders.Queries.GetOrderById;
+using WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById;
 using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Controllers

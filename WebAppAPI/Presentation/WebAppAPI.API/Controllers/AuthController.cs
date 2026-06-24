@@ -2,14 +2,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using WebAppAPI.Application.Features.Commands.AppUser.FacebookLogin;
-using WebAppAPI.Application.Features.Commands.AppUser.GoogleLogin;
-using WebAppAPI.Application.Features.Commands.AppUser.LoginUser;
-using WebAppAPI.Application.Features.Commands.AppUser.Logout;
-using WebAppAPI.Application.Features.Commands.AppUser.PasswordReset;
-using WebAppAPI.Application.Features.Commands.AppUser.RefreshTokenLogin;
-using WebAppAPI.Application.Features.Commands.AppUser.VerifyResetToken;
-using WebAppAPI.Application.Features.Queries.AppUser.IdentityCheck;
+using WebAppAPI.Application.Features.Auth.Commands.FacebookLogin;
+using WebAppAPI.Application.Features.Auth.Commands.GoogleLogin;
+using WebAppAPI.Application.Features.Auth.Commands.Login;
+using WebAppAPI.Application.Features.Auth.Commands.Logout;
+using WebAppAPI.Application.Features.Auth.Commands.PasswordReset;
+using WebAppAPI.Application.Features.Auth.Commands.RefreshTokenLogin;
+using WebAppAPI.Application.Features.Auth.Commands.VerifyResetToken;
+using WebAppAPI.Application.Features.Auth.Queries.IdentityCheck;
 using WebAppAPI.Application.Options.Mail;
 using WebAppAPI.Domain.Constants;
 
@@ -40,9 +40,9 @@ namespace WebAppAPI.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginUserCommandRequest loginUserCommandRequest)
+        public async Task<IActionResult> Login(LoginCommandRequest loginCommandRequest)
         {
-            LoginUserCommandResponse response = await _mediator.Send(loginUserCommandRequest);
+            LoginCommandResponse response = await _mediator.Send(loginCommandRequest);
             return Ok(response);
         }
 

@@ -4,12 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
-using WebAppAPI.Application.Features.Commands.Role.CreateRole;
-using WebAppAPI.Application.Features.Commands.Role.DeleteRange;
-using WebAppAPI.Application.Features.Commands.Role.DeleteRole;
-using WebAppAPI.Application.Features.Commands.Role.UpdateRole;
-using WebAppAPI.Application.Features.Queries.Role.GetRoleById;
-using WebAppAPI.Application.Features.Queries.Role.GetRoles;
+using WebAppAPI.Application.Features.Roles.Commands.CreateRole;
+using WebAppAPI.Application.Features.Roles.Commands.DeleteRange;
+using WebAppAPI.Application.Features.Roles.Commands.DeleteRole;
+using WebAppAPI.Application.Features.Roles.Commands.UpdateRole;
+using WebAppAPI.Application.Features.Roles.Queries.GetRoleById;
+using WebAppAPI.Application.Features.Roles.Queries.GetRoles;
 using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Controllers

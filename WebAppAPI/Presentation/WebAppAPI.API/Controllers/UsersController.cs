@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
-using WebAppAPI.Application.Features.Commands.AppUser.AssignRoleToUser;
-using WebAppAPI.Application.Features.Commands.AppUser.CreateUser;
-using WebAppAPI.Application.Features.Commands.AppUser.UpdatePassword;
-using WebAppAPI.Application.Features.Queries.AppUser.GetAllUsers;
-using WebAppAPI.Application.Features.Queries.AppUser.GetRolesByUserId;
+using WebAppAPI.Application.Features.Users.Commands.AssignRoleToUser;
+using WebAppAPI.Application.Features.Users.Commands.CreateUser;
+using WebAppAPI.Application.Features.Users.Commands.UpdatePassword;
+using WebAppAPI.Application.Features.Users.Queries.GetAllUsers;
+using WebAppAPI.Application.Features.Users.Queries.GetRolesByUserId;
 using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Controllers
