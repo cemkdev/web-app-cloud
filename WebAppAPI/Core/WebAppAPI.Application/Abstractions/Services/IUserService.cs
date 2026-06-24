@@ -17,8 +17,5 @@ namespace WebAppAPI.Application.Abstractions.Services
         /// <returns>List of role names assigned to the user.</returns>
         Task<List<string>> GetRolesByUserIdentifierAsync(string userIdentifier);
         Task AssignRoleToUserAsync(string userId, string[] roles);
-
-        Task<bool> HasRolePermissionAsync(string username, string code);
-        Task<bool> HasAdminAccessAsync(string username);
     }
 }

@@ -2,24 +2,15 @@
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.CustomAttributes;
-using WebAppAPI.Application.Repositories;
 
 namespace WebAppAPI.API.Filters
 {
-    public class RolePermissionFilter : IAsyncActionFilter
+    public class RolePermissionFilter(IPermissionService permissionService) : IAsyncActionFilter
     {
-        readonly IUserService _userService;
-        readonly IEndpointReadRepository _endpointReadRepository;
-
-        public RolePermissionFilter(IUserService userService, IEndpointReadRepository endpointReadRepository)
-        {
-            _userService = userService;
-            _endpointReadRepository = endpointReadRepository;
-        }
+        readonly IPermissionService _permissionService = permissionService;
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
@@ -39,13 +30,11 @@ namespace WebAppAPI.API.Filters
 
                 var code = $"{(httpAttribute != null ? httpAttribute.HttpMethods.First() : HttpMethods.Get)}.{authorizeDefinitionAttribute.ActionType.ToString()}.{authorizeDefinitionAttribute.Definition.Replace(" ", "")}";
 
-                var endpoint = await _endpointReadRepository.Table
-                                        .Include(e => e.Menu)
-                                        .FirstOrDefaultAsync(e => e.Code == code);
+                bool? adminOnly = await _permissionService.GetAdminOnlyByCodeAsync(code);
 
-                if (endpoint?.AdminOnly == true)
+                if (adminOnly == true)
                 {
-                    var hasAdminAccess = await _userService.HasAdminAccessAsync(username);
+                    var hasAdminAccess = await _permissionService.HasAdminAccessAsync(username);
                     if (!hasAdminAccess)
                     {
                         context.Result = new ObjectResult(new { message = "Only administrators can access this endpoint." })
@@ -56,7 +45,7 @@ namespace WebAppAPI.API.Filters
                     }
                 }
 
-                var hasRole = await _userService.HasRolePermissionAsync(username, code);
+                var hasRole = await _permissionService.HasRolePermissionAsync(username, code);
                 if (!hasRole)
                     context.Result = new ObjectResult(new { message = "You are not authorized to view this page." })
                     {

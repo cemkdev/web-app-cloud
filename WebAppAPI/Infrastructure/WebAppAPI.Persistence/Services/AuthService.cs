@@ -22,6 +22,7 @@ namespace WebAppAPI.Persistence.Services
         ITokenHandler tokenHandler,
         SignInManager<U.AppUser> signInManager,
         IUserService userService,
+        IPermissionService permissionService,
         IMailService mailService,
         IHttpContextAccessor httpContextAccessor,
         IOptions<TokenExpirationOptions> tokenExpirationOptions,
@@ -33,6 +34,7 @@ namespace WebAppAPI.Persistence.Services
         readonly ITokenHandler _tokenHandler = tokenHandler;
         readonly SignInManager<U.AppUser> _signInManager = signInManager;
         readonly IUserService _userService = userService;
+        readonly IPermissionService _permissionService = permissionService;
         readonly IMailService _mailService = mailService;
         IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
         private readonly TokenExpirationOptions _tokenExpirationOptions = tokenExpirationOptions.Value;
@@ -171,7 +173,7 @@ namespace WebAppAPI.Persistence.Services
             }
             var username = user.Identity.Name;
             var userFromDB = await _userManager.FindByNameAsync(username);
-            var isAdmin = await _userService.HasAdminAccessAsync(username);
+            var isAdmin = await _permissionService.HasAdminAccessAsync(username);
 
             var expirationClaim = user.Claims.FirstOrDefault(c => c.Type == "exp")?.Value;
             DateTime expirationDate = DateTime.MinValue;

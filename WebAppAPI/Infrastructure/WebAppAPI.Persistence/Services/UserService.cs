@@ -4,21 +4,13 @@ using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.DTOs.User;
 using WebAppAPI.Application.Exceptions;
 using WebAppAPI.Application.Helpers;
-using WebAppAPI.Application.Repositories;
-using WebAppAPI.Domain.Entities;
-using WebAppAPI.Domain.Entities.Identity;
 using U = WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class UserService(
-        UserManager<U.AppUser> userManager,
-        IEndpointReadRepository endpointReadRepository,
-        RoleManager<AppRole> roleManager) : IUserService
+    public class UserService(UserManager<U.AppUser> userManager) : IUserService
     {
         private readonly UserManager<U.AppUser> _userManager = userManager;
-        private readonly IEndpointReadRepository _endpointReadRepository = endpointReadRepository;
-        private readonly RoleManager<AppRole> _roleManager = roleManager;
 
         public async Task<ListUserDto> GetAllUsersAsync(int page, int size)
         {
@@ -137,41 +129,6 @@ namespace WebAppAPI.Persistence.Services
 
                 await _userManager.AddToRolesAsync(user, roles);
             }
-        }
-
-        public async Task<bool> HasRolePermissionAsync(string username, string code)
-        {
-            var userRoles = await GetRolesByUserIdentifierAsync(username);
-
-            if (!userRoles.Any())
-                return false;
-
-            Endpoint? endpoint = await _endpointReadRepository.GetByCodeWithMenuAsync(code);
-
-            if (endpoint == null)
-                return false;
-
-            var endpointRoleSet = endpoint.Roles.Select(r => r.Name).ToHashSet();
-            foreach (var userRole in userRoles)
-            {
-                if (endpointRoleSet.Contains(userRole))
-                    return true;
-            }
-
-            return false;
-        }
-
-        public async Task<bool> HasAdminAccessAsync(string username)
-        {
-            var userRoles = await GetRolesByUserIdentifierAsync(username);
-
-            foreach (var roleName in userRoles)
-            {
-                var role = await _roleManager.FindByNameAsync(roleName);
-                if (role?.IsAdmin == true)
-                    return true;
-            }
-            return false;
         }
     }
 }

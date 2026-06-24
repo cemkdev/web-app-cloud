@@ -48,6 +48,7 @@ namespace WebAppAPI.Persistence
             services.AddScoped<IInternalAuthentication, AuthService>();
             services.AddScoped<IExternalAuthentication, AuthService>();
             services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IPermissionService, PermissionService>();
 
             // Endpoint/Menu entities services
             services.AddScoped<IEndpointService, EndpointService>();
