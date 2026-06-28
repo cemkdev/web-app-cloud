@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Auth.Commands.PasswordReset
 {
-    public class PasswordResetCommandRequest : IRequest<PasswordResetCommandResponse>
+    public sealed class PasswordResetCommandRequest : IRequest<PasswordResetCommandResponse>
     {
-        public string Email { get; set; }
+        public required string Email { get; init; }
     }
 }

@@ -2,15 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Auth.Commands.GoogleLogin
 {
-    public class GoogleLoginCommandRequest : IRequest<GoogleLoginCommandResponse>
+    public sealed class GoogleLoginCommandRequest : IRequest<GoogleLoginCommandResponse>
     {
-        public string Id { get; set; }
-        public string IdToken { get; set; }
-        public string Name { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Email { get; set; }
-        public string PhotoUrl { get; set; }
-        public string Provider { get; set; }
+        public required string IdToken { get; init; }
     }
 }

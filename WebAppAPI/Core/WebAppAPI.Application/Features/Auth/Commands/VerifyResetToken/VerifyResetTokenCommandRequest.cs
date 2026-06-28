@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Auth.Commands.VerifyResetToken
 {
-    public class VerifyResetTokenCommandRequest : IRequest<VerifyResetTokenCommandResponse>
+    public sealed class VerifyResetTokenCommandRequest : IRequest<VerifyResetTokenCommandResponse>
     {
-        public string ResetToken { get; set; }
-        public string UserId { get; set; }
+        public required string ResetToken { get; init; }
+        public required string UserId { get; init; }
     }
 }

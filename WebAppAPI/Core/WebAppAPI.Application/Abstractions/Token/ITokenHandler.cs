@@ -1,14 +1,14 @@
 ﻿using System.Security.Claims;
-using I = WebAppAPI.Domain.Entities.Identity;
-using T = WebAppAPI.Application.DTOs;
+using WebAppAPI.Application.Features.Auth.DTOs;
+using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Application.Abstractions.Token
 {
     public interface ITokenHandler
     {
-        T.Token CreateAccessToken(I.AppUser appUser, bool isFromRefreshToken = false);
+        AccessTokenResultDto CreateAccessToken(AppUser appUser, bool isFromRefreshToken = false);
         string CreateRefreshToken();
-        Task<ClaimsPrincipal> ValidateAccessTokenAsync(string accessToken);
+        ClaimsPrincipal ValidateAccessToken(string accessToken);
 
         string? GetUsernameFromExpiredToken(string token);
     }

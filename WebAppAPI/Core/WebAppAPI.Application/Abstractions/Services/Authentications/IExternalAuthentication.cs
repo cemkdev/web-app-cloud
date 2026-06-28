@@ -1,10 +1,10 @@
-﻿using T = WebAppAPI.Application.DTOs;
+﻿using WebAppAPI.Application.Features.Auth.DTOs;
 
 namespace WebAppAPI.Application.Abstractions.Services.Authentications
 {
     public interface IExternalAuthentication
     {
-        Task<T.Token> FacebookLoginAsync(string authToken);
-        Task<T.Token> GoogleLoginAsync(string idToken);
+        Task<AccessTokenResultDto> FacebookLoginAsync(string authToken);
+        Task<AccessTokenResultDto> GoogleLoginAsync(string idToken);
     }
 }

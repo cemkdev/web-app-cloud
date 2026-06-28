@@ -10,7 +10,7 @@ namespace WebAppAPI.API.Filters
 {
     public class RolePermissionFilter(IPermissionService permissionService) : IAsyncActionFilter
     {
-        readonly IPermissionService _permissionService = permissionService;
+        private readonly IPermissionService _permissionService = permissionService;
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {

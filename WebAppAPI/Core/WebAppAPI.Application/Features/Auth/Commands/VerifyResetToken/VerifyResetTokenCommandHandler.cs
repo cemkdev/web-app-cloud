@@ -3,20 +3,13 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Auth.Commands.VerifyResetToken
 {
-    public class VerifyResetTokenCommandHandler : IRequestHandler<VerifyResetTokenCommandRequest, VerifyResetTokenCommandResponse>
+    public sealed class VerifyResetTokenCommandHandler(IAuthService authService) : IRequestHandler<VerifyResetTokenCommandRequest, VerifyResetTokenCommandResponse>
     {
-        readonly IAuthService _authService;
-
-        public VerifyResetTokenCommandHandler(IAuthService authService)
-        {
-            _authService = authService;
-        }
-
         public async Task<VerifyResetTokenCommandResponse> Handle(VerifyResetTokenCommandRequest request, CancellationToken cancellationToken)
         {
-            bool state = await _authService.VerifyResetTokenAsync(request.ResetToken, request.UserId);
+            bool state = await authService.VerifyResetTokenAsync(request.ResetToken, request.UserId);
 
-            return new()
+            return new VerifyResetTokenCommandResponse
             {
                 State = state,
             };

@@ -1,6 +1,6 @@
 ﻿namespace WebAppAPI.Application.Features.Auth.Commands.PasswordReset
 {
-    public class PasswordResetCommandResponse
+    public sealed class PasswordResetCommandResponse
     {
     }
 }

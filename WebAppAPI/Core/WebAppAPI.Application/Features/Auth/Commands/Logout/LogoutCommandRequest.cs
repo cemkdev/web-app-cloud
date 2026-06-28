@@ -2,7 +2,7 @@
 
 namespace WebAppAPI.Application.Features.Auth.Commands.Logout
 {
-    public class LogoutCommandRequest : IRequest<LogoutCommandResponse>
+    public sealed class LogoutCommandRequest : IRequest<LogoutCommandResponse>
     {
     }
 }

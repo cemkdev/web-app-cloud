@@ -1,21 +1,16 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Auth.DTOs;
 
 namespace WebAppAPI.Application.Features.Auth.Queries.IdentityCheck
 {
-    public class IdentityCheckQueryHandler : IRequestHandler<IdentityCheckQueryRequest, IdentityCheckQueryResponse>
+    public sealed class IdentityCheckQueryHandler(IAuthService authService) : IRequestHandler<IdentityCheckQueryRequest, IdentityCheckQueryResponse>
     {
-        readonly IAuthService _authService;
-
-        public IdentityCheckQueryHandler(IAuthService authService)
-        {
-            _authService = authService;
-        }
-
         public async Task<IdentityCheckQueryResponse> Handle(IdentityCheckQueryRequest request, CancellationToken cancellationToken)
         {
-            var identityCheckResult = await _authService.IdentityCheckAsync();
-            return new()
+            IdentityCheckResultDto identityCheckResult = await authService.IdentityCheckAsync();
+
+            return new IdentityCheckQueryResponse
             {
                 UserId = identityCheckResult.UserId,
                 Username = identityCheckResult.Username,

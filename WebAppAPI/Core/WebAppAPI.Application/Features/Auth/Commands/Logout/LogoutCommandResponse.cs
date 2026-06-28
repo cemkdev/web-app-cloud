@@ -1,8 +1,8 @@
 ﻿namespace WebAppAPI.Application.Features.Auth.Commands.Logout
 {
-    public class LogoutCommandResponse
+    public sealed class LogoutCommandResponse
     {
-        public bool IsSuccess { get; set; }
-        public string? Message { get; set; }
+        public bool IsSuccess { get; init; }
+        public string? Message { get; init; }
     }
 }

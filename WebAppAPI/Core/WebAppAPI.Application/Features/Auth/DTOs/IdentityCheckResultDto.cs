@@ -1,6 +1,6 @@
-﻿namespace WebAppAPI.Application.Features.Auth.Queries.IdentityCheck
+﻿namespace WebAppAPI.Application.Features.Auth.DTOs
 {
-    public sealed class IdentityCheckQueryResponse
+    public sealed class IdentityCheckResultDto
     {
         public required string UserId { get; init; }
         public required string Username { get; init; }

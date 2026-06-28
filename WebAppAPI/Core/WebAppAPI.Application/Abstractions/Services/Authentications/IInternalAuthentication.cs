@@ -1,10 +1,10 @@
-﻿using T = WebAppAPI.Application.DTOs;
+﻿using WebAppAPI.Application.Features.Auth.DTOs;
 
 namespace WebAppAPI.Application.Abstractions.Services.Authentications
 {
     public interface IInternalAuthentication
     {
-        Task<T.Token> LoginAsync(string usernameOrEmail, string password);
-        Task<T.Token> RefreshTokenLoginAsync();
+        Task<AccessTokenResultDto> LoginAsync(string usernameOrEmail, string password);
+        Task<AccessTokenResultDto> RefreshTokenLoginAsync();
     }
 }

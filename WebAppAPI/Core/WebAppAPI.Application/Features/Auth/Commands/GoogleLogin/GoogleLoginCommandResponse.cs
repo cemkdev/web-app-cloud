@@ -1,9 +1,6 @@
-﻿using WebAppAPI.Application.DTOs;
-
-namespace WebAppAPI.Application.Features.Auth.Commands.GoogleLogin
+﻿namespace WebAppAPI.Application.Features.Auth.Commands.GoogleLogin
 {
-    public class GoogleLoginCommandResponse
+    public sealed class GoogleLoginCommandResponse
     {
-        //public Token Token { get; set; }
     }
 }

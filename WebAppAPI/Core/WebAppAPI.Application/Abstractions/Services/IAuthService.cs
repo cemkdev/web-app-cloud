@@ -1,5 +1,5 @@
 ﻿using WebAppAPI.Application.Abstractions.Services.Authentications;
-using WebAppAPI.Application.DTOs;
+using WebAppAPI.Application.Features.Auth.DTOs;
 
 namespace WebAppAPI.Application.Abstractions.Services
 {
@@ -7,7 +7,7 @@ namespace WebAppAPI.Application.Abstractions.Services
     {
         Task PasswordResetAsync(string email);
         Task<bool> VerifyResetTokenAsync(string resetToken, string userId);
-        Task<IdentityCheckDto> IdentityCheckAsync();
+        Task<IdentityCheckResultDto> IdentityCheckAsync();
         Task LogoutAsync();
     }
 }

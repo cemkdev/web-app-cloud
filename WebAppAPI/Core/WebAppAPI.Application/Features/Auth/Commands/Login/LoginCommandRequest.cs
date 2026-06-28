@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Auth.Commands.Login
 {
-    public class LoginCommandRequest : IRequest<LoginCommandResponse>
+    public sealed class LoginCommandRequest : IRequest<LoginCommandResponse>
     {
-        public string UsernameOrEmail { get; set; }
-        public string Password { get; set; }
+        public required string UsernameOrEmail { get; init; }
+        public required string Password { get; init; }
     }
 }
