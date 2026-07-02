@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> ## 🚧 Active Refactoring & Modernization
+> This repository is currently undergoing a major refactoring and modernization effort.
+> The current focus is improving architecture, maintainability, consistency, code quality, and aligning the solution with modern .NET engineering practices.
+> Additional platform improvements, including observability and deployment enhancements, are planned after this phase is completed.
+
+---
+
+
 # Project Overview
 This project is a modern **e-commerce web application** built with a robust **.NET 6 (Onion Architecture)** API and an **Angular 19** frontend.  
 
