@@ -2,11 +2,12 @@
 
 namespace WebAppAPI.Application.CustomAttributes
 {
-    public class AuthorizeDefinitionAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    public sealed class AuthorizeDefinitionAttribute : Attribute
     {
-        public string Menu { get; set; }
-        public string Definition { get; set; }
-        public ActionType ActionType { get; set; }
-        public bool AdminOnly { get; set; } = false;
+        public required string Menu { get; set; }
+        public required string Definition { get; set; }
+        public required ActionType ActionType { get; set; }
+        public bool AdminOnly { get; set; }
     }
 }

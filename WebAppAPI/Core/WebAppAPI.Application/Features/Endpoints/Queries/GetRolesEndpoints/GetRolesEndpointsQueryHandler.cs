@@ -1,23 +1,18 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Endpoints.DTOs;
 
 namespace WebAppAPI.Application.Features.Endpoints.Queries.GetRolesEndpoints
 {
-    public class GetRolesEndpointsQueryHandler : IRequestHandler<GetRolesEndpointsQueryRequest, GetRolesEndpointsQueryResponse>
+    public sealed class GetRolesEndpointsQueryHandler(IEndpointService endpointService) : IRequestHandler<GetRolesEndpointsQueryRequest, GetRolesEndpointsQueryResponse>
     {
-        readonly IEndpointService _endpointService;
-
-        public GetRolesEndpointsQueryHandler(IEndpointService endpointService)
-        {
-            _endpointService = endpointService;
-        }
-
         public async Task<GetRolesEndpointsQueryResponse> Handle(GetRolesEndpointsQueryRequest request, CancellationToken cancellationToken)
         {
-            var response = await _endpointService.GetRolesEndpointsAsync();
-            return new()
+            List<RolesEndpointsDto> rolesEndpoints = await endpointService.GetRolesEndpointsAsync(cancellationToken);
+
+            return new GetRolesEndpointsQueryResponse
             {
-                RolesEndpoints = response
+                RolesEndpoints = rolesEndpoints
             };
         }
     }

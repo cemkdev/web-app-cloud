@@ -1,26 +1,28 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Exceptions;
+using WebAppAPI.Application.Features.Users.Commands.UpdatePassword.DTOs;
 
 namespace WebAppAPI.Application.Features.Users.Commands.UpdatePassword
 {
-    public class UpdatePasswordCommandHandler : IRequestHandler<UpdatePasswordCommandRequest, UpdatePasswordCommandResponse>
+    public sealed class UpdatePasswordCommandHandler(IUserService userService) : IRequestHandler<UpdatePasswordCommandRequest, UpdatePasswordCommandResponse>
     {
-        readonly IUserService _userService;
-
-        public UpdatePasswordCommandHandler(IUserService userService)
-        {
-            _userService = userService;
-        }
-
         public async Task<UpdatePasswordCommandResponse> Handle(UpdatePasswordCommandRequest request, CancellationToken cancellationToken)
         {
-            if (request.Password.Equals(request.PasswordConfirm))
-                await _userService.UpdatePasswordAsync(request.UserId, request.ResetToken, request.Password);
-            else
+            if (!string.Equals(
+                request.Password,
+                request.PasswordConfirm,
+                StringComparison.Ordinal))
                 throw new PasswordChangeFailedException("The confirm password does not match the password.");
 
-            return new();
+            await userService.UpdatePasswordAsync(new ResetPasswordDto
+            {
+                UserId = request.UserId,
+                ResetToken = request.ResetToken,
+                NewPassword = request.Password
+            });
+
+            return new UpdatePasswordCommandResponse();
         }
     }
 }

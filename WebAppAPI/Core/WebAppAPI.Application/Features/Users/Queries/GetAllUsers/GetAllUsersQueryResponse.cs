@@ -1,8 +1,10 @@
-﻿namespace WebAppAPI.Application.Features.Users.Queries.GetAllUsers
+﻿using WebAppAPI.Application.Features.Users.Queries.GetAllUsers.DTOs;
+
+namespace WebAppAPI.Application.Features.Users.Queries.GetAllUsers
 {
-    public class GetAllUsersQueryResponse
+    public sealed class GetAllUsersQueryResponse
     {
-        public int TotalUserCount { get; set; }
-        public object Users { get; set; }
+        public required int TotalUserCount { get; init; }
+        public required IReadOnlyList<UserListItemDto> Users { get; init; }
     }
 }

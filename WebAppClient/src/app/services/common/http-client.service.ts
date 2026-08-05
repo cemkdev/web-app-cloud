@@ -61,6 +61,22 @@ export class HttpClientService {
     });
   }
 
+  // PATCH
+  patch<T>(requestParameter: Partial<RequestParameters>, body: Partial<T>): Observable<T> {
+    let url: string = "";
+
+    if (requestParameter.fullEndPoint)
+      url = requestParameter.fullEndPoint;
+    else
+      url = `${this.url(requestParameter)}${requestParameter.queryString ? `?${requestParameter.queryString}` : ""}`;
+
+    return this.httpClient.patch<T>(url, body, {
+      headers: requestParameter.headers,
+      withCredentials: requestParameter.withCredentials ?? true,
+      responseType: requestParameter.responseType as "json"
+    });
+  }
+
   // DELETE
   delete<T>(requestParameter: Partial<RequestParameters>, id: string): Observable<T> {
     let url: string = "";

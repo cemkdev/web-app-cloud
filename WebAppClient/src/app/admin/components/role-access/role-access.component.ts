@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ApplicationService } from '../../../services/common/models/application.service';
 import { BaseComponent, SpinnerType } from '../../../base/base.component';
-import { Menu } from '../../../contracts/application-configurations/menu';
+import { EndpointMenu } from '../../../contracts/application-configurations/endpoint-menu';
 import { AlertifyService, MessageType, Position } from '../../../services/admin/alertify.service';
 import { List_Roles } from '../../../contracts/role/list_roles';
 import { RoleService } from '../../../services/common/models/role.service';
@@ -15,7 +15,7 @@ import { AuthorizationEndpointService } from '../../../services/common/models/au
   templateUrl: './role-access.component.html'
 })
 export class RoleAccessComponent extends BaseComponent implements OnInit {
-  data: Menu[] = [];
+  data: EndpointMenu[] = [];
 
   roles: List_Roles[] = [];
   availableRoles: List_Roles[] = [];
@@ -62,12 +62,13 @@ export class RoleAccessComponent extends BaseComponent implements OnInit {
     this.hideSpinner(SpinnerType.BallAtom);
   }
 
-  constructTableStructure() {
-    for (const module of this.data) {
-      for (const action of module.actions) {
-        this.permissions[action.code] = {};
+  constructTableStructure(): void {
+    for (const endpointMenu of this.data) {
+      for (const endpointDefinition of endpointMenu.endpoints) {
+        this.permissions[endpointDefinition.code] = {};
+
         for (const role of this.roles) {
-          this.permissions[action.code][role.id] = false;
+          this.permissions[endpointDefinition.code][role.id] = false;
         }
       }
     }
@@ -75,11 +76,13 @@ export class RoleAccessComponent extends BaseComponent implements OnInit {
 
   async getMenus(): Promise<void> {
     this.data = await this.applicationService.getAuthorizeDefinitionEndpoints();
-    this.data = this.data.map(menu => {
-      menu.name = this.addSpacesBeforeCapitalLetters(menu.name);  // We are adding a space to the 'Menu Name'.
-      return menu;
+
+    this.data = this.data.map(endpointMenu => {
+      endpointMenu.name = this.addSpacesBeforeCapitalLetters(endpointMenu.name);  // We are adding a space to the 'Menu Name'.
+      return endpointMenu;
     });
   }
+
   addSpacesBeforeCapitalLetters(input: string): string {
     let result = input[0];
 
@@ -139,13 +142,13 @@ export class RoleAccessComponent extends BaseComponent implements OnInit {
       assignRequest.roleId = role.id;
       assignRequest.roleEndpoints = [];
 
-      for (const module of this.data) {
-        for (const action of module.actions) {
-          const isAuthorized = this.permissions[action.code]?.[role.id] ?? false;
+      for (const endpointMenu of this.data) {
+        for (const endpointDefinition of endpointMenu.endpoints) {
+          const isAuthorized = this.permissions[endpointDefinition.code]?.[role.id] ?? false;
 
           assignRequest.roleEndpoints.push({
-            menuName: module.name.replace(' ', ''),
-            endpointCode: action.code,
+            menuName: endpointMenu.name.replaceAll(' ', ''),
+            endpointCode: endpointDefinition.code,
             isAuthorized: isAuthorized
           });
         }

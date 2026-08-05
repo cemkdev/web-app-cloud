@@ -61,7 +61,7 @@ export class RoleService {
 
   // PUT / UPDATE
   update(role: Update_Role, successCallBack?: any, errorCallBack?: (errorMessage: string) => void) {
-    this.httpClientService.put({
+    this.httpClientService.patch({
       controller: "roles",
       action: "update-role"
     }, role)
@@ -70,13 +70,16 @@ export class RoleService {
           successCallBack();
         },
         error: (errorResponse: HttpErrorResponse) => {
-          const _error: Array<{ key: string, value: Array<string> }> = errorResponse.error;
+          const errors: Array<{ key: string, value: Array<string> }> = errorResponse.error;
+
           let message = "";
-          _error.forEach((v, index) => {
-            v.value.forEach((_v, _index) => {
-              message += `${_v}<br>`;
+
+          errors.forEach(error => {
+            error.value.forEach(value => {
+              message += `${value}<br>`;
             });
           });
+          
           errorCallBack(message);
         }
       });

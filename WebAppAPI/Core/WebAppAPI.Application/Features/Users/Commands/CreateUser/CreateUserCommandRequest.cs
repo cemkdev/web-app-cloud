@@ -2,14 +2,14 @@
 
 namespace WebAppAPI.Application.Features.Users.Commands.CreateUser
 {
-    public class CreateUserCommandRequest : IRequest<CreateUserCommandResponse>
+    public sealed class CreateUserCommandRequest : IRequest<CreateUserCommandResponse>
     {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Username { get; set; }
-        public string Email { get; set; }
-        public string PhoneNumber { get; set; }
-        public string Password { get; set; }
-        public string ConfirmPassword { get; set; }
+        public required string FirstName { get; init; }
+        public required string LastName { get; init; }
+        public required string Username { get; init; }
+        public required string Email { get; init; }
+        public required string PhoneNumber { get; init; }
+        public required string Password { get; init; }
+        public required string ConfirmPassword { get; init; }
     }
 }

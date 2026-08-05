@@ -1,9 +1,9 @@
 ﻿namespace WebAppAPI.Application.Features.Roles.Queries.GetRoleById
 {
-    public class GetRoleByIdQueryResponse
+    public sealed class GetRoleByIdQueryResponse
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public bool IsAdmin { get; set; }
+        public required string Id { get; init; }
+        public required string Name { get; init; }
+        public bool IsAdmin { get; init; }
     }
 }

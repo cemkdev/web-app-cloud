@@ -1,25 +1,20 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Roles.DTOs;
 
 namespace WebAppAPI.Application.Features.Roles.Queries.GetRoleById
 {
-    public class GetRoleByIdQueryHandler : IRequestHandler<GetRoleByIdQueryRequest, GetRoleByIdQueryResponse>
+    public class GetRoleByIdQueryHandler(IRoleService roleService) : IRequestHandler<GetRoleByIdQueryRequest, GetRoleByIdQueryResponse>
     {
-        readonly IRoleService _roleService;
-
-        public GetRoleByIdQueryHandler(IRoleService roleService)
-        {
-            _roleService = roleService;
-        }
-
         public async Task<GetRoleByIdQueryResponse> Handle(GetRoleByIdQueryRequest request, CancellationToken cancellationToken)
         {
-            var role = await _roleService.GetRoleByIdAsync(request.Id);
-            return new()
+            RoleDto role = await roleService.GetRoleByIdAsync(request.Id, cancellationToken);
+
+            return new GetRoleByIdQueryResponse
             {
-                Id = role.id,
-                Name = role.name,
-                IsAdmin = role.isAdmin
+                Id = role.Id,
+                Name = role.Name,
+                IsAdmin = role.IsAdmin
             };
         }
     }

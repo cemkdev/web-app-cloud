@@ -17,61 +17,74 @@ namespace WebAppAPI.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-    public class RolesController : ControllerBase
+    public class RolesController(IMediator mediator) : ControllerBase
     {
-        readonly IMediator _mediator;
-
-        public RolesController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
+        private readonly IMediator _mediator = mediator;
 
         [HttpGet("get-roles")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Get Roles", ActionType = ActionType.Read, AdminOnly = true)]
-        public async Task<IActionResult> GetRoles([FromQuery] GetRolesQueryRequest getRolesQueryRequest)
+        public async Task<ActionResult<List<GetRolesQueryResponse>>> GetRoles(CancellationToken cancellationToken)
         {
-            List<GetRolesQueryResponse> response = await _mediator.Send(getRolesQueryRequest);
+            List<GetRolesQueryResponse> response = await _mediator.Send(
+                new GetRolesQueryRequest(),
+                cancellationToken);
+
             return Ok(response);
         }
 
         [HttpGet("get-role-by-id/{id}")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Get Role By Id", ActionType = ActionType.Read, AdminOnly = true)]
-        public async Task<IActionResult> GetRoleById([FromRoute] GetRoleByIdQueryRequest getRoleByIdQueryRequest)
+        public async Task<ActionResult<GetRoleByIdQueryResponse>> GetRoleById([FromRoute] string id, CancellationToken cancellationToken)
         {
-            GetRoleByIdQueryResponse response = await _mediator.Send(getRoleByIdQueryRequest);
+            GetRoleByIdQueryResponse response = await _mediator.Send(
+                new GetRoleByIdQueryRequest
+                {
+                    Id = id
+                },
+                cancellationToken);
+
             return Ok(response);
         }
 
         [HttpPost("create-role")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Create Role", ActionType = ActionType.Write, AdminOnly = true)]
-        public async Task<IActionResult> CreateRole([FromBody] CreateRoleCommandRequest createRoleCommandRequest)
+        public async Task<ActionResult<CreateRoleCommandResponse>> CreateRole([FromBody] CreateRoleCommandRequest request, CancellationToken cancellationToken)
         {
-            CreateRoleCommandResponse response = await _mediator.Send(createRoleCommandRequest);
+            CreateRoleCommandResponse response = await _mediator.Send(request, cancellationToken);
+
             return Ok(response);
         }
 
-        [HttpPut("update-role")]
+        [HttpPatch("update-role")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Update Role", ActionType = ActionType.Update, AdminOnly = true)]
-        public async Task<IActionResult> UpdateRole([FromBody] UpdateRoleCommandRequest updateRoleCommandRequest)
+        public async Task<ActionResult<UpdateRoleCommandResponse>> UpdateRole([FromBody] UpdateRoleCommandRequest request, CancellationToken cancellationToken)
         {
-            UpdateRoleCommandResponse response = await _mediator.Send(updateRoleCommandRequest);
+            UpdateRoleCommandResponse response = await _mediator.Send(request, cancellationToken);
+
             return Ok(response);
         }
 
         [HttpDelete("{id}")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Delete Role", ActionType = ActionType.Delete, AdminOnly = true)]
-        public async Task<IActionResult> DeleteRole([FromRoute] DeleteRoleCommandRequest deleteRoleCommandRequest)
+        public async Task<ActionResult<DeleteRoleCommandResponse>> DeleteRole([FromRoute] string id, CancellationToken cancellationToken)
         {
-            DeleteRoleCommandResponse response = await _mediator.Send(deleteRoleCommandRequest);
+            DeleteRoleCommandResponse response = await _mediator.Send(
+                new DeleteRoleCommandRequest
+                {
+                    Id = id
+                },
+                cancellationToken);
+
             return Ok(response);
         }
 
         [HttpPost("delete-range-role")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Roles, Definition = "Delete Range of Role", ActionType = ActionType.Delete, AdminOnly = true)]
-        public async Task<IActionResult> DeleteRange([FromBody] DeleteRangeCommandRequest deleteRangeCommandRequest)
+        public async Task<ActionResult<DeleteRangeCommandResponse>> DeleteRange([FromBody] DeleteRangeCommandRequest request, CancellationToken cancellationToken)
         {
-            DeleteRangeCommandResponse response = await _mediator.Send(deleteRangeCommandRequest);
-            return Ok();
+            DeleteRangeCommandResponse response = await _mediator.Send(request, cancellationToken);
+
+            return Ok(response);
         }
     }
 }

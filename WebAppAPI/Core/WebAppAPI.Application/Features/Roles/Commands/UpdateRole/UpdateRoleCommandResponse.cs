@@ -1,7 +1,7 @@
 ﻿namespace WebAppAPI.Application.Features.Roles.Commands.UpdateRole
 {
-    public class UpdateRoleCommandResponse
+    public sealed class UpdateRoleCommandResponse
     {
-        public bool Succeeded { get; set; }
+        public bool Succeeded { get; init; }
     }
 }

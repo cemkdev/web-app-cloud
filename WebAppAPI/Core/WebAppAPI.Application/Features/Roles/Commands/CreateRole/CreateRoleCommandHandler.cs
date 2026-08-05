@@ -1,23 +1,24 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Roles.Commands.CreateRole.DTOs;
 
 namespace WebAppAPI.Application.Features.Roles.Commands.CreateRole
 {
-    public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommandRequest, CreateRoleCommandResponse>
+    public sealed class CreateRoleCommandHandler(IRoleService roleService) : IRequestHandler<CreateRoleCommandRequest, CreateRoleCommandResponse>
     {
-        readonly IRoleService _roleService;
-
-        public CreateRoleCommandHandler(IRoleService roleService)
-        {
-            _roleService = roleService;
-        }
-
         public async Task<CreateRoleCommandResponse> Handle(CreateRoleCommandRequest request, CancellationToken cancellationToken)
         {
-            var result = await _roleService.CreateRoleAsync(request.Name, request.IsAdmin);
-            return new()
+            bool succeeded = await roleService.CreateRoleAsync(
+                new CreateRoleDto
+                {
+                    Name = request.Name,
+                    IsAdmin = request.IsAdmin
+                },
+                cancellationToken);
+
+            return new CreateRoleCommandResponse
             {
-                Succeeded = result
+                Succeeded = succeeded
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿using WebAppAPI.Application.DTOs.Configuration;
+﻿using WebAppAPI.Application.DTOs.AuthorizationDefinitions;
 
 namespace WebAppAPI.Application.Abstractions.Services.Configurations
 {
@@ -9,6 +9,6 @@ namespace WebAppAPI.Application.Abstractions.Services.Configurations
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        List<Menu> GetAuthorizeDefinitionEndpoints(Type type);
+        List<EndpointMenuDto> GetAuthorizeDefinitionEndpoints(Type type);
     }
 }

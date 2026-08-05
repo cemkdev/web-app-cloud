@@ -4,68 +4,81 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using System.Reflection;
 using WebAppAPI.Application.Abstractions.Services.Configurations;
 using WebAppAPI.Application.CustomAttributes;
-using C = WebAppAPI.Application.DTOs.Configuration;
+using WebAppAPI.Application.DTOs.AuthorizationDefinitions;
 
 namespace WebAppAPI.Infrastructure.Services.Configurations
 {
-    public class ApplicationService : IApplicationService
+    public sealed class ApplicationService : IApplicationService
     {
-        /// <summary>
-        /// It scans all endpoints and sends them to the client before initially adding them to the database.
-        /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
-        public List<C.Menu> GetAuthorizeDefinitionEndpoints(Type type)
+        public List<EndpointMenuDto> GetAuthorizeDefinitionEndpoints(Type type)
         {
-            Assembly assembly = Assembly.GetAssembly(type);
-            var controllers = assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(ControllerBase)));
+            ArgumentNullException.ThrowIfNull(type);
 
-            List<C.Menu> menus = new();
-            if (controllers != null)
+            Assembly assembly = type.Assembly;
+
+            IEnumerable<Type> controllers = assembly
+                .GetTypes()
+                .Where(controllerType =>
+                    controllerType.IsAssignableTo(typeof(ControllerBase)) &&
+                    !controllerType.IsAbstract);
+
+            List<EndpointMenuDto> endpointMenus = [];
+
+            foreach (Type controller in controllers)
             {
-                foreach (var controller in controllers)
+                IEnumerable<MethodInfo> actions = controller
+                    .GetMethods()
+                    .Where(method =>
+                        method.IsDefined(
+                            typeof(AuthorizeDefinitionAttribute),
+                            inherit: true));
+
+                foreach (MethodInfo action in actions)
                 {
-                    var actions = controller.GetMethods().Where(m => m.IsDefined(typeof(AuthorizeDefinitionAttribute)));
-                    if (actions != null)
+                    AuthorizeDefinitionAttribute authorizeDefinitionAttribute =
+                        action.GetCustomAttribute<AuthorizeDefinitionAttribute>(inherit: true)
+                        ?? throw new InvalidOperationException($"AuthorizeDefinitionAttribute could not be read from '{action.DeclaringType?.Name}.{action.Name}'.");
+
+                    if (string.IsNullOrWhiteSpace(authorizeDefinitionAttribute.Menu))
+                        throw new InvalidOperationException($"Menu definition is missing on '{action.DeclaringType?.Name}.{action.Name}'.");
+
+                    if (string.IsNullOrWhiteSpace(authorizeDefinitionAttribute.Definition))
+                        throw new InvalidOperationException($"Endpoint definition is missing on '{action.DeclaringType?.Name}.{action.Name}'.");
+
+                    EndpointMenuDto? endpointMenu = endpointMenus.FirstOrDefault(endpointMenu => endpointMenu.Name == authorizeDefinitionAttribute.Menu);
+
+                    if (endpointMenu is null)
                     {
-                        foreach (var action in actions)
+                        endpointMenu = new EndpointMenuDto
                         {
-                            var attributes = action.GetCustomAttributes(true);
-                            if (attributes != null)
-                            {
-                                C.Menu menu = null;
-
-                                var authorizeDefinitionAttribute = attributes.FirstOrDefault(a => a.GetType() == typeof(AuthorizeDefinitionAttribute)) as AuthorizeDefinitionAttribute;
-                                if (!menus.Any(m => m.Name == authorizeDefinitionAttribute.Menu))
-                                {
-                                    menu = new() { Name = authorizeDefinitionAttribute.Menu };
-                                    menus.Add(menu);
-                                }
-                                else
-                                    menu = menus.FirstOrDefault(m => m.Name == authorizeDefinitionAttribute.Menu);
-
-                                C.Action confAction = new()
-                                {
-                                    ActionType = authorizeDefinitionAttribute.ActionType,
-                                    Definition = authorizeDefinitionAttribute.Definition,
-                                    AdminOnly = authorizeDefinitionAttribute.AdminOnly,
-                                };
-
-                                var httpAttribute = attributes.FirstOrDefault(a => a.GetType().IsAssignableTo(typeof(HttpMethodAttribute))) as HttpMethodAttribute;
-                                if (httpAttribute != null)
-                                    confAction.HttpType = httpAttribute.HttpMethods.First();
-                                else
-                                    confAction.HttpType = HttpMethods.Get;
-
-                                confAction.Code = $"{confAction.HttpType}.{confAction.ActionType}.{confAction.Definition.Replace(" ", "")}";
-
-                                menu.Actions.Add(confAction);
-                            }
-                        }
+                            Name = authorizeDefinitionAttribute.Menu
+                        };
+                        endpointMenus.Add(endpointMenu);
                     }
+
+                    HttpMethodAttribute? httpMethodAttribute = action
+                        .GetCustomAttributes(inherit: true)
+                        .OfType<HttpMethodAttribute>()
+                        .FirstOrDefault();
+
+                    string httpType = httpMethodAttribute?.HttpMethods.FirstOrDefault() ?? HttpMethods.Get;
+
+                    string code = $"{httpType}.{authorizeDefinitionAttribute.ActionType}.{authorizeDefinitionAttribute.Definition.Replace(" ", "")}";
+
+                    EndpointDefinitionDto endpointDefinition = new()
+                    {
+                        ActionType = authorizeDefinitionAttribute.ActionType,
+                        HttpType = httpType,
+                        Definition = authorizeDefinitionAttribute.Definition,
+                        Code = code,
+                        AdminOnly = authorizeDefinitionAttribute.AdminOnly
+                    };
+
+                    endpointMenu.Endpoints.Add(endpointDefinition);
                 }
             }
-            return menus;
+
+            return endpointMenus;
         }
     }
 }

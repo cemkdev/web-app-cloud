@@ -1,7 +1,7 @@
 ﻿namespace WebAppAPI.Application.Features.Roles.Commands.DeleteRole
 {
-    public class DeleteRoleCommandResponse
+    public sealed class DeleteRoleCommandResponse
     {
-        public bool Succeeded { get; set; }
+        public bool Succeeded { get; init; }
     }
 }

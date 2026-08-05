@@ -1,6 +1,7 @@
 ﻿namespace WebAppAPI.Application.Features.Roles.Commands.DeleteRange
 {
-    public class DeleteRangeCommandResponse
+    public sealed class DeleteRangeCommandResponse
     {
+        public bool Succeeded { get; init; }
     }
 }

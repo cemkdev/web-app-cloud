@@ -77,32 +77,50 @@
       </tr>
     </thead>
     <tbody>
-      <ng-container *ngFor="let module of data">
+      <ng-container *ngFor="let endpointMenu of data">
         <tr>
           <td [attr.colspan]="selectedRoles.length + 1" class="module-name">
             <div class="module-name-wrapper">
               <mat-icon class="material-icons-outlined"
                 >manage_accounts</mat-icon
               >
-              <span>{{ module.name }} Management</span>
+              <span>{{ endpointMenu.name }} Management</span>
             </div>
           </td>
         </tr>
-        <tr *ngFor="let action of module.actions">
+
+        <tr *ngFor="let endpointDefinition of endpointMenu.endpoints">
           <td class="td-endpoints">
-            {{ action.definition }}
-            <!-- <span class="http-type">{{ action.httpType }}</span> -->
-            <span *ngIf="action.adminOnly" class="admin-only">Admins Only</span>
+            {{ endpointDefinition.definition }}
+            <!-- <span class="http-type">{{ endpointDefinition.httpType }}</span> -->
+            <span *ngIf="endpointDefinition.adminOnly" class="admin-only">Admins Only</span>
           </td>
           <td class="td-checkbox" *ngFor="let role of selectedRoles">
+            <span [matTooltip]="role.name === 'SystemAdministrator' && 
+              [
+                'GET.Read.GetRoles',
+                'GET.Read.GetAuthorizeDefinitionEndpoints',
+                'GET.Read.GetRolesandEndpoints',
+                'POST.Write.AssignRolestoEndpoints'
+              ].includes(endpointDefinition.code) ? 'System Administrator permissions cannot be removed' : ''"
+              [matTooltipDisabled]="isEditing === false || role.name !== 'SystemAdministrator' || ![
+                'GET.Read.GetRoles',
+                'GET.Read.GetAuthorizeDefinitionEndpoints',
+                'GET.Read.GetRolesandEndpoints',
+                'POST.Write.AssignRolestoEndpoints'
+              ].includes(endpointDefinition.code)"
+            matTooltipPosition="above"
+          >
             <mat-checkbox
-              [(ngModel)]="permissions[action.code][role.id]"
-              [disabled]="
-                isEditing === false || (!role.isAdmin && action.adminOnly)
-              "
-              matTooltip="Only super admins can assign this endpoint"
-              matTooltipPosition="above"
+              [(ngModel)]="permissions[endpointDefinition.code][role.id]"
+              [disabled]="isEditing === false || (!role.isAdmin && endpointDefinition.adminOnly) || (role.name === 'SystemAdministrator' && [
+                'GET.Read.GetRoles',
+                'GET.Read.GetAuthorizeDefinitionEndpoints',
+                'GET.Read.GetRolesandEndpoints',
+                'POST.Write.AssignRolestoEndpoints'
+              ].includes(endpointDefinition.code))"
             ></mat-checkbox>
+          </span>
           </td>
         </tr>
       </ng-container>

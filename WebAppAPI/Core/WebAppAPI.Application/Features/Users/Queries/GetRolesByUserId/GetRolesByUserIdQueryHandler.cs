@@ -1,33 +1,28 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Enums;
+using WebAppAPI.Application.Features.Roles.DTOs;
 
 namespace WebAppAPI.Application.Features.Users.Queries.GetRolesByUserId
 {
-    public class GetRolesByUserIdQueryHandler : IRequestHandler<GetRolesByUserIdQueryRequest, List<GetRolesByUserIdQueryResponse>>
+    public sealed class GetRolesByUserIdQueryHandler(
+        IUserService userService,
+        IRoleService roleService) : IRequestHandler<GetRolesByUserIdQueryRequest, List<GetRolesByUserIdQueryResponse>>
     {
-        readonly IUserService _userService;
-        readonly IRoleService _roleService;
-
-        public GetRolesByUserIdQueryHandler(IUserService userService, IRoleService roleService)
-        {
-            _userService = userService;
-            _roleService = roleService;
-        }
-
         public async Task<List<GetRolesByUserIdQueryResponse>> Handle(GetRolesByUserIdQueryRequest request, CancellationToken cancellationToken)
         {
-            var userRoles = await _userService.GetRolesByUserIdentifierAsync(request.UserId);
-            var allRoles = await _roleService.GetRolesAsync();
+            List<string> userRoles = await userService.GetRolesByUserIdentifierAsync(request.UserId, UserIdentifierType.Id);
+            List<RoleDto> allRoles = await roleService.GetRolesAsync(cancellationToken);
 
-            var result = allRoles.Select(roles => new GetRolesByUserIdQueryResponse
-            {
-                RoleId = roles.Id,
-                RoleName = roles.Name,
-                IsAdmin = roles.IsAdmin,
-                IsAssigned = userRoles.Contains(roles.Name)
-            }).ToList();
-
-            return result;
+            return allRoles
+                .Select(role => new GetRolesByUserIdQueryResponse
+                {
+                    RoleId = role.Id,
+                    RoleName = role.Name,
+                    IsAdmin = role.IsAdmin,
+                    IsAssigned = userRoles.Contains(role.Name)
+                })
+                .ToList();
         }
     }
 }

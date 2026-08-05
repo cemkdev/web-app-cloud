@@ -28,13 +28,17 @@ namespace WebAppAPI.API.Filters
                     return;
                 }
 
-                var code = $"{(httpAttribute != null ? httpAttribute.HttpMethods.First() : HttpMethods.Get)}.{authorizeDefinitionAttribute.ActionType.ToString()}.{authorizeDefinitionAttribute.Definition.Replace(" ", "")}";
+                var code = $"{(
+                    httpAttribute != null ?
+                    httpAttribute.HttpMethods.First() :
+                    HttpMethods.Get
+                    )}.{authorizeDefinitionAttribute.ActionType.ToString()}.{authorizeDefinitionAttribute.Definition.Replace(" ", "")}";
 
-                bool? adminOnly = await _permissionService.GetAdminOnlyByCodeAsync(code);
+                bool? isAdminOnly = await _permissionService.RequiresAdminAccessAsync(code, context.HttpContext.RequestAborted);
 
-                if (adminOnly == true)
+                if (isAdminOnly == true)
                 {
-                    var hasAdminAccess = await _permissionService.HasAdminAccessAsync(username);
+                    var hasAdminAccess = await _permissionService.HasAdminAccessAsync(username, context.HttpContext.RequestAborted);
                     if (!hasAdminAccess)
                     {
                         context.Result = new ObjectResult(new { message = "Only administrators can access this endpoint." })
@@ -45,7 +49,7 @@ namespace WebAppAPI.API.Filters
                     }
                 }
 
-                var hasRole = await _permissionService.HasRolePermissionAsync(username, code);
+                var hasRole = await _permissionService.HasRolePermissionAsync(username, code, context.HttpContext.RequestAborted);
                 if (!hasRole)
                     context.Result = new ObjectResult(new { message = "You are not authorized to view this page." })
                     {

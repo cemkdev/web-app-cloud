@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,7 @@ import { MatSelectModule } from '@angular/material/select';
     RouterModule.forChild([
       { path: "", component: RoleAccessComponent }
     ]),
-    MatCheckboxModule, MatButtonModule, MatDividerModule, FormsModule, MatIconModule, MatFormFieldModule, MatSelectModule
+    MatCheckboxModule, MatButtonModule, MatDividerModule, FormsModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule
   ]
 })
 export class RoleAccessModule { }

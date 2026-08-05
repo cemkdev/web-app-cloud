@@ -1,6 +1,6 @@
 ﻿namespace WebAppAPI.Application.Features.Users.Commands.UpdatePassword
 {
-    public class UpdatePasswordCommandResponse
+    public sealed class UpdatePasswordCommandResponse
     {
     }
 }

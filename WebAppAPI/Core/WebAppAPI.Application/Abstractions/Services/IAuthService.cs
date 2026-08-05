@@ -7,7 +7,7 @@ namespace WebAppAPI.Application.Abstractions.Services
     {
         Task PasswordResetAsync(string email);
         Task<bool> VerifyResetTokenAsync(string resetToken, string userId);
-        Task<IdentityCheckResultDto> IdentityCheckAsync();
+        Task<IdentityCheckResultDto> IdentityCheckAsync(CancellationToken cancellationToken);
         Task LogoutAsync();
     }
 }

@@ -3,21 +3,17 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Roles.Commands.DeleteRole
 {
-    public class DeleteRoleCommandHandler : IRequestHandler<DeleteRoleCommandRequest, DeleteRoleCommandResponse>
+    public sealed class DeleteRoleCommandHandler(IRoleService roleService) : IRequestHandler<DeleteRoleCommandRequest, DeleteRoleCommandResponse>
     {
-        readonly IRoleService _roleService;
-
-        public DeleteRoleCommandHandler(IRoleService roleService)
-        {
-            _roleService = roleService;
-        }
-
         public async Task<DeleteRoleCommandResponse> Handle(DeleteRoleCommandRequest request, CancellationToken cancellationToken)
         {
-            var result = await _roleService.DeleteRoleAsync(request.Id);
-            return new()
+            bool succeeded = await roleService.DeleteRolesAsync(
+            [request.Id],
+            cancellationToken);
+
+            return new DeleteRoleCommandResponse
             {
-                Succeeded = result
+                Succeeded = succeeded
             };
         }
     }

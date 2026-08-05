@@ -2,8 +2,8 @@
 {
     public interface IPermissionService
     {
-        Task<bool?> GetAdminOnlyByCodeAsync(string code);
-        Task<bool> HasRolePermissionAsync(string username, string code);
-        Task<bool> HasAdminAccessAsync(string username);
+        Task<bool?> RequiresAdminAccessAsync(string code, CancellationToken cancellationToken);
+        Task<bool> HasRolePermissionAsync(string username, string code, CancellationToken cancellationToken);
+        Task<bool> HasAdminAccessAsync(string username, CancellationToken cancellationToken);
     }
 }

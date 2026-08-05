@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Roles.Queries.GetRoleById
 {
-    public class GetRoleByIdQueryRequest : IRequest<GetRoleByIdQueryResponse>
+    public sealed class GetRoleByIdQueryRequest : IRequest<GetRoleByIdQueryResponse>
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

@@ -24,6 +24,8 @@ namespace WebAppAPI.Persistence
 
             services.AddIdentity<AppUser, AppRole>(options =>
             {
+                options.User.RequireUniqueEmail = true;
+
                 options.Password.RequiredLength = 3;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireDigit = false;

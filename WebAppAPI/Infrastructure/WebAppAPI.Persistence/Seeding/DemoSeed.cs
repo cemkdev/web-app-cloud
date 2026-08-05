@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Cryptography;
 using System.Text.Json;
+using WebAppAPI.Application.Consts;
 using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Entities.Common;
 using WebAppAPI.Domain.Entities.Identity;
@@ -40,14 +41,32 @@ namespace WebAppAPI.Persistence.Seeding
             await db.Database.MigrateAsync();
 
             // 2. ROLES
-            await roleManager.CreateAsync(new AppRole { Id = "e63314dc-40c1-444d-aaed-f403c99d002d", Name = "SystemAdministrator", IsAdmin = true, DateCreated = DemoDate(3, 10, 9, 0) });
-            await roleManager.CreateAsync(new AppRole { Id = "6745d85c-c3dd-41fd-8137-83471d3c7fd6", Name = "StoreManager", IsAdmin = true, DateCreated = DemoDate(3, 10, 9, 7) });
-            await roleManager.CreateAsync(new AppRole { Id = "46006b7d-b6be-4365-92f3-8959d1a52fdb", Name = "Customer", IsAdmin = false, DateCreated = DemoDate(3, 10, 9, 14) });
+            await roleManager.CreateAsync(new AppRole
+            {
+                Id = SystemBootstrapConstants.SystemAdministratorRoleId,
+                Name = SystemBootstrapConstants.SystemAdministratorRoleName,
+                IsAdmin = true,
+                DateCreated = DemoDate(3, 10, 9, 0)
+            });
+            await roleManager.CreateAsync(new AppRole
+            {
+                Id = "6745d85c-c3dd-41fd-8137-83471d3c7fd6",
+                Name = "StoreManager",
+                IsAdmin = true,
+                DateCreated = DemoDate(3, 10, 9, 7)
+            });
+            await roleManager.CreateAsync(new AppRole
+            {
+                Id = "46006b7d-b6be-4365-92f3-8959d1a52fdb",
+                Name = "Customer",
+                IsAdmin = false,
+                DateCreated = DemoDate(3, 10, 9, 14)
+            });
 
             // 3. USERS
             var systemAdministrator = new AppUser
             {
-                Id = "9782395d-d478-47e5-9896-41c55ea4a693",
+                Id = SystemBootstrapConstants.SystemAdministratorUserId,
                 FirstName = "Eric",
                 LastName = "Cartman",
                 FullName = "Eric Cartman",
@@ -57,7 +76,7 @@ namespace WebAppAPI.Persistence.Seeding
                 DateCreated = DemoDate(3, 10, 9, 35)
             };
             await userManager.CreateAsync(systemAdministrator, "123");
-            await userManager.AddToRoleAsync(systemAdministrator, "SystemAdministrator");
+            await userManager.AddToRoleAsync(systemAdministrator, SystemBootstrapConstants.SystemAdministratorRoleName);
 
             var storeManager = new AppUser
             {
@@ -106,7 +125,11 @@ namespace WebAppAPI.Persistence.Seeding
                                    ));
 
             var jsonText = await System.IO.File.ReadAllTextAsync(productsJsonPath);
-            var raw = JsonSerializer.Deserialize<List<ProductJson>>(jsonText, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+            var raw = JsonSerializer.Deserialize<List<ProductJson>>(
+                jsonText,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidOperationException("Product seed data could not be deserialized.");
 
             var products = raw.Select((j, index) =>
             {
@@ -383,11 +406,12 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("5476c1d3-94d4-4f0f-8dba-25b1c51217fb"), ActionType="Write",  HttpType="POST",   Definition="Add Item to Basket",               Code="POST.Write.AddItemtoBasket",               AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
                 new Endpoint { Id=Guid.Parse("3da24ddd-984c-470c-8cc6-9db518f68ca2"), ActionType="Update", HttpType="PUT",    Definition="Update Basket Item Quantity",      Code="PUT.Update.UpdateBasketItemQuantity",      AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
                 new Endpoint { Id=Guid.Parse("42508967-c22b-4e14-91d0-964524f19c00"), ActionType="Delete", HttpType="DELETE", Definition="Remove Basket Item",               Code="DELETE.Delete.RemoveBasketItem",           AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
+                new Endpoint { Id=Guid.Parse("8a0c1d16-acb3-49d9-81eb-cbe667771457"), ActionType="Read",   HttpType="GET",    Definition = "Get Roles and Endpoints",        Code = "GET.Read.GetRolesandEndpoints",          AdminOnly = true, Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")]},
                 new Endpoint { Id=Guid.Parse("46487cb5-8535-4614-8c6f-38c9700911bf"), ActionType="Write",  HttpType="POST",   Definition="Assign Roles to Endpoints",        Code="POST.Write.AssignRolestoEndpoints",        AdminOnly=true,  Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")] },
                 new Endpoint { Id=Guid.Parse("22fc12e2-48f2-4efd-beae-ce9584e6979e"), ActionType="Read",   HttpType="GET",    Definition="Get All Orders",                   Code="GET.Read.GetAllOrders",                    AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("94cc08dc-d762-4a3a-9160-fbf61e0209d6"), ActionType="Read",   HttpType="GET",    Definition="Get Order by Id",                  Code="GET.Read.GetOrderbyId",                    AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
-                new Endpoint { Id=Guid.Parse("1cd9083d-07ba-402b-a4a0-a7528913b31d"), ActionType="Write",  HttpType="POST",   Definition="Create Order",                      Code="POST.Write.CreateOrder",                   AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
-                new Endpoint { Id=Guid.Parse("bedd1a37-43c5-4f20-b973-73e6f0b034a1"), ActionType="Delete", HttpType="DELETE", Definition="Delete Order",                      Code="DELETE.Delete.DeleteOrder",                AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("1cd9083d-07ba-402b-a4a0-a7528913b31d"), ActionType="Write",  HttpType="POST",   Definition="Create Order",                     Code="POST.Write.CreateOrder",                   AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("bedd1a37-43c5-4f20-b973-73e6f0b034a1"), ActionType="Delete", HttpType="DELETE", Definition="Delete Order",                     Code="DELETE.Delete.DeleteOrder",                AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("49c9b622-82bb-4ff0-bdea-777158180c17"), ActionType="Delete", HttpType="POST",   Definition="Delete Range of Order",            Code="POST.Delete.DeleteRangeofOrder",           AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("5638d377-c52e-4ea6-aa15-52f7ed3361d8"), ActionType="Update", HttpType="PUT",    Definition="Update Order Status",              Code="PUT.Update.UpdateOrderStatus",             AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("a9c8f7a4-a0aa-4564-b03d-1941838fdabb"), ActionType="Read",   HttpType="GET",    Definition="Get Order Status History by Id",   Code="GET.Read.GetOrderStatusHistorybyId",       AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
@@ -402,7 +426,7 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("d983cdf3-8e10-401e-88b0-722beb78b168"), ActionType="Read",   HttpType="GET",    Definition="Get Roles",                        Code="GET.Read.GetRoles",                        AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("09b85d6b-51d1-46ec-8f5e-76f6303ac1fb"), ActionType="Read",   HttpType="GET",    Definition="Get Role By Id",                   Code="GET.Read.GetRoleById",                     AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("32907798-0b30-4e00-b006-00e2a3c4c4c3"), ActionType="Write",  HttpType="POST",   Definition="Create Role",                      Code="POST.Write.CreateRole",                    AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
-                new Endpoint { Id=Guid.Parse("eb9b72d0-72d4-4a3f-a267-73e118247cfa"), ActionType="Update", HttpType="PUT",    Definition="Update Role",                      Code="PUT.Update.UpdateRole",                    AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
+                new Endpoint { Id=Guid.Parse("eb9b72d0-72d4-4a3f-a267-73e118247cfa"), ActionType="Update", HttpType="PATCH",  Definition="Update Role",                      Code="PATCH.Update.UpdateRole",                    AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("c3a10d8c-dc06-4ee9-812c-59f84dae661e"), ActionType="Delete", HttpType="DELETE", Definition="Delete Role",                      Code="DELETE.Delete.DeleteRole",                 AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("e7c4a0e0-747b-48ed-983c-4b65fbad074a"), ActionType="Delete", HttpType="POST",   Definition="Delete Range of Role",             Code="POST.Delete.DeleteRangeofRole",            AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("793b43f2-a533-4f5a-abd4-96c12788925b"), ActionType="Read",   HttpType="GET",    Definition="Get All Users",                    Code="GET.Read.GetAllUsers",                     AdminOnly=true,  Menu = menusById[Guid.Parse("569c46f7-8af4-40f5-bf08-0ab17a7a3a3e")] },
@@ -415,42 +439,47 @@ namespace WebAppAPI.Persistence.Seeding
             var map = new Dictionary<string, string[]>
             {
                 // System Administrator
-                ["GET.Read.GetAuthorizeDefinitionEndpoints"] = new[] { "SystemAdministrator" },
-                ["GET.Read.GetAllUsers"] = new[] { "SystemAdministrator" },
-                ["POST.Write.AssignRolestoEndpoints"] = new[] { "SystemAdministrator" },
-                ["DELETE.Delete.DeleteOrder"] = new[] { "SystemAdministrator" },
-                ["POST.Delete.DeleteRangeofOrder"] = new[] { "SystemAdministrator" },
-                ["GET.Read.GetRoles"] = new[] { "SystemAdministrator" },
-                ["POST.Write.CreateRole"] = new[] { "SystemAdministrator" },
-                ["GET.Read.GetRoleById"] = new[] { "SystemAdministrator" },
-                ["DELETE.Delete.DeleteRole"] = new[] { "SystemAdministrator" },
-                ["PUT.Update.UpdateRole"] = new[] { "SystemAdministrator" },
-                ["POST.Delete.DeleteRangeofRole"] = new[] { "SystemAdministrator" },
-                ["DELETE.Delete.DeleteProduct"] = new[] { "SystemAdministrator" },
-                ["POST.Delete.DeleteRangeofProduct"] = new[] { "SystemAdministrator" },
-                ["POST.Write.AssignRoleToUser"] = new[] { "SystemAdministrator" },
+                ["GET.Read.GetAuthorizeDefinitionEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetRoles"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetRolesandEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.AssignRolestoEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetAllUsers"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.AssignRolestoEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["DELETE.Delete.DeleteOrder"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Delete.DeleteRangeofOrder"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.CreateRole"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetRoleById"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["DELETE.Delete.DeleteRole"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["PATCH.Update.UpdateRole"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Delete.DeleteRangeofRole"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["DELETE.Delete.DeleteProduct"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Delete.DeleteRangeofProduct"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.AssignRoleToUser"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
 
                 // Store Manager + System Administrator
-                ["GET.Read.GetAllOrders"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["GET.Read.GetOrderbyId"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["POST.Write.CreateOrder"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
-                ["PUT.Update.UpdateOrderStatus"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["GET.Read.GetOrderStatusHistorybyId"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["POST.Write.CreateProduct"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["PUT.Update.UpdateProduct"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["DELETE.Delete.DeleteProductImage"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["PUT.Update.ChangeCoverImage"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["GET.Read.GetProductQRCode"] = new[] { "StoreManager", "SystemAdministrator" },
-                ["POST.Write.UploadFiles"] = new[] { "StoreManager", "SystemAdministrator" },
+                ["GET.Read.GetAllOrders"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetOrderbyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.CreateOrder"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["PUT.Update.UpdateOrderStatus"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetOrderStatusHistorybyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.CreateProduct"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["PUT.Update.UpdateProduct"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["DELETE.Delete.DeleteProductImage"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["PUT.Update.ChangeCoverImage"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetProductQRCode"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.UploadFiles"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
 
                 // Customer + Store Manager + System Administrator
-                ["GET.Read.GetAllBasketItems"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
-                ["POST.Write.AddItemtoBasket"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
-                ["PUT.Update.UpdateBasketItemQuantity"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
-                ["DELETE.Delete.RemoveBasketItem"] = new[] { "Customer", "StoreManager", "SystemAdministrator" },
+                ["GET.Read.GetAllBasketItems"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["POST.Write.AddItemtoBasket"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["PUT.Update.UpdateBasketItemQuantity"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["DELETE.Delete.RemoveBasketItem"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
             };
 
-            var rolesByName = await db.Roles.ToDictionaryAsync(r => r.Name); // "Customer","StoreManager","SystemAdministrator"
+            // "Customer","StoreManager","SystemAdministrator"
+            var rolesByName = await db.Roles
+                .Where(role => role.Name != null)
+                .ToDictionaryAsync(role => role.Name!);
 
             foreach (var kv in map)
             {
@@ -672,15 +701,15 @@ namespace WebAppAPI.Persistence.Seeding
             [Guid.Parse("39a3b77f-dd8a-460c-ae5d-a650ad3b80ca")] = new DateTime(2025, 4, 18, 11, 5, 0, DateTimeKind.Utc)
         };
 
-        private class ProductJson
+        private sealed class ProductJson
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string title { get; set; }
-            public string description { get; set; }
-            public float price { get; set; }
-            public int stock { get; set; }
-            public float? rating { get; set; }
+            public required string id { get; init; }
+            public required string name { get; init; }
+            public required string title { get; init; }
+            public required string description { get; init; }
+            public float price { get; init; }
+            public int stock { get; init; }
+            public float? rating { get; init; }
         }
     }
 }

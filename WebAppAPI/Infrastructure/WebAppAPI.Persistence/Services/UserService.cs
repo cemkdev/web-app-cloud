@@ -1,29 +1,45 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebAppAPI.Application.Abstractions.Services;
-using WebAppAPI.Application.DTOs.User;
+using WebAppAPI.Application.Consts;
+using WebAppAPI.Application.Enums;
 using WebAppAPI.Application.Exceptions;
+using WebAppAPI.Application.Features.Users.Commands.AssignRoleToUser.DTOs;
+using WebAppAPI.Application.Features.Users.Commands.CreateUser.DTOs;
+using WebAppAPI.Application.Features.Users.Commands.UpdatePassword.DTOs;
+using WebAppAPI.Application.Features.Users.Queries.GetAllUsers.DTOs;
 using WebAppAPI.Application.Helpers;
-using U = WebAppAPI.Domain.Entities.Identity;
+using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class UserService(UserManager<U.AppUser> userManager) : IUserService
+    public sealed class UserService(
+        UserManager<AppUser> userManager,
+        RoleManager<AppRole> roleManager) : IUserService
     {
-        private readonly UserManager<U.AppUser> _userManager = userManager;
+        private readonly UserManager<AppUser> _userManager = userManager;
+        private readonly RoleManager<AppRole> _roleManager = roleManager;
 
-        public async Task<ListUserDto> GetAllUsersAsync(int page, int size)
+        public async Task<GetAllUsersDto> GetAllUsersAsync(int page, int size, CancellationToken cancellationToken)
         {
-            List<U.AppUser> query = await _userManager.Users.ToListAsync();
+            if (page < 0)
+                throw new ArgumentOutOfRangeException(nameof(page), page, "Page cannot be less than zero.");
 
-            var dataPerPage = query.OrderBy(o => o.DateCreated).Skip(page * size).Take(size);
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size), size, "Size must be greater than zero.");
 
-            return new()
-            {
-                TotalUserCount = query.Count(),
-                Users = dataPerPage.Select(user => new
+            IQueryable<AppUser> usersQuery = _userManager.Users.AsNoTracking();
+
+            int totalUserCount = await usersQuery.CountAsync(cancellationToken);
+
+            List<UserListItemDto> users = await usersQuery
+                .OrderBy(user => user.DateCreated)
+                .ThenBy(user => user.Id)
+                .Skip(page * size)
+                .Take(size)
+                .Select(user => new UserListItemDto
                 {
-                    Id = user.Id.ToString(),
+                    Id = user.Id,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     UserName = user.UserName,
@@ -32,102 +48,160 @@ namespace WebAppAPI.Persistence.Services
                     TwoFactorEnabled = user.TwoFactorEnabled,
                     DateCreated = user.DateCreated,
                     DateUpdated = user.DateUpdated
-                }).ToList()
+                })
+                .ToListAsync(cancellationToken);
+
+            return new GetAllUsersDto
+            {
+                TotalUserCount = totalUserCount,
+                Users = users
             };
         }
 
-        public async Task<CreateUserResponse> CreateAsync(CreateUser model)
+        public async Task<CreateUserResultDto> CreateAsync(CreateUserDto model)
         {
-            U.AppUser user = await _userManager.FindByEmailAsync(model.Email);
-            if (user != null)
-                throw new Exception();
+            ArgumentNullException.ThrowIfNull(model);
 
-            IdentityResult result = await _userManager.CreateAsync(new()
+            string firstName = model.FirstName.Trim();
+            string lastName = model.LastName.Trim();
+
+            AppUser user = new()
             {
                 Id = Guid.NewGuid().ToString(),
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                FullName = model.FullName,
-                UserName = model.Username,
-                PhoneNumber = model.PhoneNumber,
-                Email = model.Email
-            }, model.Password);
+                FirstName = firstName,
+                LastName = lastName,
+                FullName = $"{firstName} {lastName}",
+                UserName = model.Username.Trim(),
+                Email = model.Email.Trim(),
+                PhoneNumber = model.PhoneNumber.Trim()
+            };
 
-            CreateUserResponse response = new() { Succeeded = result.Succeeded };
+            IdentityResult result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
-                response.Message = "The user has been successfully created.";
-            else
-                foreach (var error in result.Errors)
-                    response.Message += $"• {error.Code}: {error.Description}";
-
-            return response;
-        }
-
-        public async Task UpdateRefreshTokenAsync(U.AppUser user, string refreshToken, int refreshTokenExpiration, bool isFromRefreshToken = false, bool isLogout = false)
-        {
-            if (user != null)
             {
-                if (isLogout) // Clear refresh token during logout.
+                return new CreateUserResultDto
                 {
-                    user.RefreshToken = null;
-                    user.RefreshTokenEndDate = refreshTokenExpiration == 0 ? null : DateTime.UtcNow.AddSeconds(refreshTokenExpiration);
-                    await _userManager.UpdateAsync(user);
-                }
-                else
-                {
-                    user.RefreshToken = refreshToken;
-                    if (!isFromRefreshToken) // Keep the existing refresh token expiration during silent refresh.
-                        user.RefreshTokenEndDate = DateTime.UtcNow.AddSeconds(refreshTokenExpiration);
-                    await _userManager.UpdateAsync(user);
-                }
+                    Succeeded = true,
+                    Message = "The user has been successfully created."
+                };
             }
-            else
-                throw new NotFoundUserException();
-        }
 
-        public async Task UpdatePasswordAsync(string userId, string resetToken, string newPassword)
-        {
-            U.AppUser user = await _userManager.FindByIdAsync(userId);
+            string errorMessage = string.Join(
+                Environment.NewLine,
+                result.Errors.Select(error => $"• {error.Code}: {error.Description}"));
 
-            if (user != null)
+            return new CreateUserResultDto
             {
-                resetToken = resetToken.UrlDecode();
-
-                IdentityResult result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
-                if (result.Succeeded)
-                    await _userManager.UpdateSecurityStampAsync(user);
-                else
-                    throw new PasswordChangeFailedException();
-            }
+                Succeeded = false,
+                Message = errorMessage
+            };
         }
 
-        public async Task<List<string>> GetRolesByUserIdentifierAsync(string userIdentifier)
+        public async Task UpdatePasswordAsync(ResetPasswordDto model)
+        {
+            ArgumentNullException.ThrowIfNull(model);
+
+            if (string.IsNullOrWhiteSpace(model.UserId) ||
+                string.IsNullOrWhiteSpace(model.ResetToken) ||
+                string.IsNullOrWhiteSpace(model.NewPassword))
+                throw new PasswordChangeFailedException();
+
+            AppUser? user = await _userManager.FindByIdAsync(model.UserId);
+
+            if (user is null)
+                throw new PasswordChangeFailedException();
+
+            string decodedResetToken = model.ResetToken.UrlDecode();
+
+            IdentityResult resetResult = await _userManager.ResetPasswordAsync(
+                user,
+                decodedResetToken,
+                model.NewPassword);
+
+            if (!resetResult.Succeeded)
+                throw new PasswordChangeFailedException();
+
+            IdentityResult securityStampResult = await _userManager.UpdateSecurityStampAsync(user);
+
+            if (!securityStampResult.Succeeded)
+                throw new PasswordChangeFailedException();
+        }
+
+        public async Task<List<string>> GetRolesByUserIdentifierAsync(string userIdentifier, UserIdentifierType identifierType)
         {
             if (string.IsNullOrWhiteSpace(userIdentifier))
                 throw new ArgumentException("User identifier must be provided.", nameof(userIdentifier));
 
-            U.AppUser user = await _userManager.FindByIdAsync(userIdentifier);
+            AppUser? user = identifierType switch
+            {
+                UserIdentifierType.Id => await _userManager.FindByIdAsync(userIdentifier),
 
-            if (user == null)
-                user = await _userManager.FindByNameAsync(userIdentifier);
+                UserIdentifierType.Username => await _userManager.FindByNameAsync(userIdentifier),
 
-            if (user == null)
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(identifierType),
+                    identifierType,
+                    "Unsupported user identifier type.")
+            };
+
+            if (user is null)
                 throw new NotFoundUserException();
 
-            var userRoles = await _userManager.GetRolesAsync(user);
-            return userRoles.ToList();
+            IList<string> roles = await _userManager.GetRolesAsync(user);
+
+            return roles.ToList();
         }
 
-        public async Task AssignRoleToUserAsync(string userId, string[] roles)
+        public async Task AssignRoleToUserAsync(AssignRolesToUserDto model)
         {
-            U.AppUser user = await _userManager.FindByIdAsync(userId);
-            if (user != null)
-            {
-                var userRoles = await _userManager.GetRolesAsync(user);
-                await _userManager.RemoveFromRolesAsync(user, userRoles);
+            ArgumentNullException.ThrowIfNull(model);
 
-                await _userManager.AddToRolesAsync(user, roles);
+            AppUser? user = await _userManager.FindByIdAsync(model.UserId);
+
+            if (user is null)
+                throw new NotFoundUserException("The user could not be found.");
+
+            HashSet<string> requestedRoles = model.Roles
+                .Where(role => !string.IsNullOrWhiteSpace(role))
+                .Select(role => role.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Keep the bootstrap administrator user assigned to the protected role.
+            if (user.Id == SystemBootstrapConstants.SystemAdministratorUserId && !requestedRoles.Contains(SystemBootstrapConstants.SystemAdministratorRoleName))
+                throw new InvalidOperationException("The SystemAdministrator role cannot be removed from the bootstrap administrator user.");
+            //
+
+            foreach (string roleName in requestedRoles)
+                if (!await _roleManager.RoleExistsAsync(roleName))
+                    throw new InvalidOperationException($"The role '{roleName}' does not exist.");
+
+            IList<string> currentRoles = await _userManager.GetRolesAsync(user);
+
+            string[] rolesToRemove = currentRoles
+                .Where(role => !requestedRoles.Contains(role))
+                .ToArray();
+
+            HashSet<string> currentRoleSet = currentRoles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            string[] rolesToAdd = requestedRoles
+                .Where(role => !currentRoleSet.Contains(role))
+                .ToArray();
+
+            if (rolesToRemove.Length > 0)
+            {
+                IdentityResult removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+
+                if (!removeResult.Succeeded)
+                    throw new InvalidOperationException("User roles could not be removed.");
+            }
+
+            if (rolesToAdd.Length > 0)
+            {
+                IdentityResult addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
+
+                if (!addResult.Succeeded)
+                    throw new InvalidOperationException("User roles could not be assigned.");
             }
         }
     }

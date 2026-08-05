@@ -9,21 +9,14 @@ using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Infrastructure.Services
 {
-    public class MailService : IMailService
-    {
-        private readonly MailOptions _mailOptions;
-        private readonly EmailDisplayNameOptions _emailDisplayNameOptions;
-        private readonly ClientOptions _clientOptions;
-
-        public MailService(
+    public class MailService(
             IOptions<MailOptions> mailOptions,
             IOptions<EmailDisplayNameOptions> emailDisplayNameOptions,
-            IOptions<ClientOptions> clientOptions)
-        {
-            _mailOptions = mailOptions.Value;
-            _emailDisplayNameOptions = emailDisplayNameOptions.Value;
-            _clientOptions = clientOptions.Value;
-        }
+            IOptions<ClientOptions> clientOptions) : IMailService
+    {
+        private readonly MailOptions _mailOptions = mailOptions.Value;
+        private readonly EmailDisplayNameOptions _emailDisplayNameOptions = emailDisplayNameOptions.Value;
+        private readonly ClientOptions _clientOptions = clientOptions.Value;
 
         public async Task SendMailAsync(string recipient, string subject, string body, bool isBodyHtml = true)
         {

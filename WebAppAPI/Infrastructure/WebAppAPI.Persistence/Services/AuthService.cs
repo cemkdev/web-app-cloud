@@ -6,8 +6,8 @@ using System.Security.Claims;
 using System.Text.Json;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Abstractions.Token;
-using WebAppAPI.Application.DTOs.Facebook;
 using WebAppAPI.Application.Exceptions;
+using WebAppAPI.Application.Features.Auth.Commands.FacebookLogin.DTOs;
 using WebAppAPI.Application.Features.Auth.DTOs;
 using WebAppAPI.Application.Helpers;
 using WebAppAPI.Application.Options.Authentication;
@@ -15,12 +15,11 @@ using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class AuthService(
+    public sealed class AuthService(
         IHttpClientFactory httpClientFactory,
         UserManager<AppUser> userManager,
         ITokenHandler tokenHandler,
         SignInManager<AppUser> signInManager,
-        IUserService userService,
         IPermissionService permissionService,
         IMailService mailService,
         IHttpContextAccessor httpContextAccessor,
@@ -32,7 +31,6 @@ namespace WebAppAPI.Persistence.Services
         private readonly UserManager<AppUser> _userManager = userManager;
         private readonly ITokenHandler _tokenHandler = tokenHandler;
         private readonly SignInManager<AppUser> _signInManager = signInManager;
-        private readonly IUserService _userService = userService;
         private readonly IPermissionService _permissionService = permissionService;
         private readonly IMailService _mailService = mailService;
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
@@ -78,10 +76,7 @@ namespace WebAppAPI.Persistence.Services
             AccessTokenResultDto token = _tokenHandler.CreateAccessToken(user);
             string refreshToken = _tokenHandler.CreateRefreshToken();
 
-            await _userService.UpdateRefreshTokenAsync(
-                user,
-                refreshToken,
-                _tokenExpirationOptions.RefreshToken);
+            await UpdateRefreshTokenAsync(user, refreshToken);
 
             SetAccessTokenCookie(token);
 
@@ -112,11 +107,10 @@ namespace WebAppAPI.Persistence.Services
             AccessTokenResultDto token = _tokenHandler.CreateAccessToken(user, true);
             string newRefreshToken = _tokenHandler.CreateRefreshToken();
 
-            await _userService.UpdateRefreshTokenAsync(
+            await UpdateRefreshTokenAsync(
                 user,
                 newRefreshToken,
-                _tokenExpirationOptions.RefreshToken,
-                isFromRefreshToken: true);
+                isSilentRefresh: true);
 
             SetAccessTokenCookie(token);
 
@@ -125,7 +119,7 @@ namespace WebAppAPI.Persistence.Services
         #endregion
 
         #region External Login
-        public async Task<AccessTokenResultDto> FacebookLoginAsync(string authToken)
+        public async Task<AccessTokenResultDto> FacebookLoginAsync(string authToken, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(authToken))
                 throw new AuthenticationFailedException();
@@ -136,23 +130,29 @@ namespace WebAppAPI.Persistence.Services
                 string.IsNullOrWhiteSpace(_externalLoginOptions.Facebook.ClientSecret))
                 throw new AuthenticationFailedException("Facebook login is not configured.");
 
-            string accessTokenResponse = await _httpClient.GetStringAsync($"https://graph.facebook.com/oauth/access_token?client_id={_externalLoginOptions.Facebook.ClientId}&client_secret={_externalLoginOptions.Facebook.ClientSecret}&grant_type=client_credentials");
+            string accessTokenResponse = await _httpClient.GetStringAsync(
+                $"https://graph.facebook.com/oauth/access_token?client_id={_externalLoginOptions.Facebook.ClientId}&client_secret={_externalLoginOptions.Facebook.ClientSecret}&grant_type=client_credentials",
+                cancellationToken);
 
-            FacebookAccessTokenResponse? facebookAccessTokenResponse = JsonSerializer.Deserialize<FacebookAccessTokenResponse>(accessTokenResponse);
+            AccessTokenResponse? facebookAccessTokenResponse = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenResponse);
 
             if (string.IsNullOrWhiteSpace(facebookAccessTokenResponse?.AccessToken))
                 throw new AuthenticationFailedException("Invalid external authentication.");
 
-            string userAccessTokenValidation = await _httpClient.GetStringAsync($"https://graph.facebook.com/debug_token?input_token={authToken}&access_token={facebookAccessTokenResponse.AccessToken}");
+            string userAccessTokenValidation = await _httpClient.GetStringAsync(
+                $"https://graph.facebook.com/debug_token?input_token={authToken}&access_token={facebookAccessTokenResponse.AccessToken}",
+                cancellationToken);
 
-            FacebookUserAccessTokenValidation? validation = JsonSerializer.Deserialize<FacebookUserAccessTokenValidation>(userAccessTokenValidation);
+            TokenValidationResponse? validation = JsonSerializer.Deserialize<TokenValidationResponse>(userAccessTokenValidation);
 
-            if (validation?.Data.IsValid != true || string.IsNullOrWhiteSpace(validation.Data.UserId))
+            if (validation?.Data?.IsValid != true || string.IsNullOrWhiteSpace(validation.Data.UserId))
                 throw new AuthenticationFailedException("Invalid external authentication.");
 
-            string userInfoResponse = await _httpClient.GetStringAsync($"https://graph.facebook.com/me?fields=first_name,last_name,name,email&access_token={authToken}");
+            string userInfoResponse = await _httpClient.GetStringAsync(
+                $"https://graph.facebook.com/me?fields=first_name,last_name,name,email&access_token={authToken}",
+                cancellationToken);
 
-            FacebookUserInfoResponse? userInfo = JsonSerializer.Deserialize<FacebookUserInfoResponse>(userInfoResponse);
+            UserInfoResponse? userInfo = JsonSerializer.Deserialize<UserInfoResponse>(userInfoResponse);
 
             ExternalLoginInfo externalLoginInfo = new()
             {
@@ -201,7 +201,7 @@ namespace WebAppAPI.Persistence.Services
         #endregion
 
         #region IdentityCheck
-        public async Task<IdentityCheckResultDto> IdentityCheckAsync()
+        public async Task<IdentityCheckResultDto> IdentityCheckAsync(CancellationToken cancellationToken)
         {
             HttpContext httpContext = GetRequiredHttpContext();
 
@@ -220,7 +220,7 @@ namespace WebAppAPI.Persistence.Services
             if (user is null)
                 throw new NotFoundUserException();
 
-            bool isAdmin = await _permissionService.HasAdminAccessAsync(username);
+            bool isAdmin = await _permissionService.HasAdminAccessAsync(username, cancellationToken);
 
             DateTime expirationDate = GetAccessTokenExpiration(principal);
 
@@ -305,12 +305,7 @@ namespace WebAppAPI.Persistence.Services
             if (user is null)
                 throw new NotFoundUserException("User not found during logout.");
 
-            await _userService.UpdateRefreshTokenAsync(
-                user,
-                refreshToken: null,
-                refreshTokenExpiration: 0,
-                isFromRefreshToken: false,
-                isLogout: true);
+            await ClearRefreshTokenAsync(user);
 
             DeleteAccessTokenCookie();
         }
@@ -358,10 +353,7 @@ namespace WebAppAPI.Persistence.Services
             AccessTokenResultDto token = _tokenHandler.CreateAccessToken(user);
             string refreshToken = _tokenHandler.CreateRefreshToken();
 
-            await _userService.UpdateRefreshTokenAsync(
-                user,
-                refreshToken,
-                _tokenExpirationOptions.RefreshToken);
+            await UpdateRefreshTokenAsync(user, refreshToken);
 
             SetAccessTokenCookie(token);
 
@@ -376,6 +368,39 @@ namespace WebAppAPI.Persistence.Services
                 AccessTokenCookieName,
                 token.AccessToken,
                 BuildAccessTokenCookieOptions(token.Expiration));
+        }
+
+        private async Task UpdateRefreshTokenAsync(AppUser user, string refreshToken, bool isSilentRefresh = false)
+        {
+            ArgumentNullException.ThrowIfNull(user);
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                throw new ArgumentException("Refresh token must be provided.", nameof(refreshToken));
+
+            user.RefreshToken = refreshToken;
+
+            if (!isSilentRefresh)
+            {
+                user.RefreshTokenEndDate = DateTime.UtcNow.AddSeconds(_tokenExpirationOptions.RefreshToken);
+            }
+
+            IdentityResult result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                throw new AuthenticationFailedException("Refresh token could not be updated.");
+        }
+
+        private async Task ClearRefreshTokenAsync(AppUser user)
+        {
+            ArgumentNullException.ThrowIfNull(user);
+
+            user.RefreshToken = null;
+            user.RefreshTokenEndDate = null;
+
+            IdentityResult result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                throw new AuthenticationFailedException("Refresh token could not be cleared.");
         }
 
         private CookieOptions BuildAccessTokenCookieOptions(DateTime expiration)

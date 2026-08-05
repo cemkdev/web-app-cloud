@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Roles.Commands.DeleteRange
 {
-    public class DeleteRangeCommandRequest : IRequest<DeleteRangeCommandResponse>
+    public sealed class DeleteRangeCommandRequest : IRequest<DeleteRangeCommandResponse>
     {
-        public List<string> RoleIds { get; set; }
+        public required IReadOnlyCollection<string> RoleIds { get; init; }
     }
 }

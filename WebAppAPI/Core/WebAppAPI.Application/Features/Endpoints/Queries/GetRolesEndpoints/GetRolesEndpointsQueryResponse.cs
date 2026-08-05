@@ -1,9 +1,9 @@
-﻿using WebAppAPI.Application.DTOs.Endpoint;
+﻿using WebAppAPI.Application.Features.Endpoints.DTOs;
 
 namespace WebAppAPI.Application.Features.Endpoints.Queries.GetRolesEndpoints
 {
-    public class GetRolesEndpointsQueryResponse
+    public sealed class GetRolesEndpointsQueryResponse
     {
-        public List<RolesEndpointsDto> RolesEndpoints { get; set; }
+        public required IReadOnlyList<RolesEndpointsDto> RolesEndpoints { get; init; }
     }
 }

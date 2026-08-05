@@ -2,11 +2,11 @@
 
 namespace WebAppAPI.Application.Features.Users.Commands.UpdatePassword
 {
-    public class UpdatePasswordCommandRequest : IRequest<UpdatePasswordCommandResponse>
+    public sealed class UpdatePasswordCommandRequest : IRequest<UpdatePasswordCommandResponse>
     {
-        public string UserId { get; set; }
-        public string ResetToken { get; set; }
-        public string Password { get; set; }
-        public string PasswordConfirm { get; set; }
+        public required string UserId { get; init; }
+        public required string ResetToken { get; init; }
+        public required string Password { get; init; }
+        public required string PasswordConfirm { get; init; }
     }
 }

@@ -1,9 +1,9 @@
-﻿using E = WebAppAPI.Domain.Entities;
+﻿using Entities = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Application.Repositories
 {
-    public interface IMenuReadRepository : IReadRepository<E.Menu>
+    public interface IMenuReadRepository : IReadRepository<Entities.Menu>
     {
-        Task<List<E.Menu>> GetAllMenusAsync(bool tracking = true);
+        Task<List<Entities.Menu>> GetAllMenusAsync(CancellationToken cancellationToken, bool tracking = false);
     }
 }

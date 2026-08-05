@@ -7,7 +7,7 @@ namespace WebAppAPI.Application.Features.Auth.Commands.FacebookLogin
     {
         public async Task<FacebookLoginCommandResponse> Handle(FacebookLoginCommandRequest request, CancellationToken cancellationToken)
         {
-            await authService.FacebookLoginAsync(request.AuthToken);
+            await authService.FacebookLoginAsync(request.AuthToken, cancellationToken);
 
             return new();
         }

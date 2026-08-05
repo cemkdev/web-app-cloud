@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Roles.Commands.CreateRole
 {
-    public class CreateRoleCommandRequest : IRequest<CreateRoleCommandResponse>
+    public sealed class CreateRoleCommandRequest : IRequest<CreateRoleCommandResponse>
     {
-        public string Name { get; set; }
-        public bool IsAdmin { get; set; }
+        public required string Name { get; init; }
+        public bool IsAdmin { get; init; }
     }
 }

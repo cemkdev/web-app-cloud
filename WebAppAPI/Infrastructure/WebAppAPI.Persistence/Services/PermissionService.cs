@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Enums;
 using WebAppAPI.Application.Repositories;
-using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class PermissionService(
+    public sealed class PermissionService(
         IUserService userService,
         IEndpointReadRepository endpointReadRepository,
         RoleManager<AppRole> roleManager) : IPermissionService
@@ -15,44 +16,37 @@ namespace WebAppAPI.Persistence.Services
         private readonly IEndpointReadRepository _endpointReadRepository = endpointReadRepository;
         private readonly RoleManager<AppRole> _roleManager = roleManager;
 
-        public async Task<bool?> GetAdminOnlyByCodeAsync(string code)
-        {
-            return await _endpointReadRepository.GetAdminOnlyByCodeAsync(code);
-        }
+        public Task<bool?> RequiresAdminAccessAsync(string code, CancellationToken cancellationToken)
+            => _endpointReadRepository.IsAdminOnlyByCodeAsync(code, cancellationToken);
 
-        public async Task<bool> HasRolePermissionAsync(string username, string code)
+        public async Task<bool> HasRolePermissionAsync(string username, string code, CancellationToken cancellationToken)
         {
-            var userRoles = await _userService.GetRolesByUserIdentifierAsync(username);
-
-            if (!userRoles.Any())
+            if (string.IsNullOrWhiteSpace(username) ||
+                string.IsNullOrWhiteSpace(code))
                 return false;
 
-            Endpoint? endpoint = await _endpointReadRepository.GetByCodeWithMenuAsync(code);
+            List<string> userRoleNames = await _userService.GetRolesByUserIdentifierAsync(username, UserIdentifierType.Username);
 
-            if (endpoint == null)
+            if (userRoleNames.Count == 0)
                 return false;
 
-            var endpointRoleSet = endpoint.Roles.Select(r => r.Name).ToHashSet();
-            foreach (var userRole in userRoles)
-            {
-                if (endpointRoleSet.Contains(userRole))
-                    return true;
-            }
-
-            return false;
+            return await _endpointReadRepository.HasAnyUserRoleForEndpointAsync(code, userRoleNames, cancellationToken);
         }
 
-        public async Task<bool> HasAdminAccessAsync(string username)
+        public async Task<bool> HasAdminAccessAsync(string username, CancellationToken cancellationToken)
         {
-            var userRoles = await _userService.GetRolesByUserIdentifierAsync(username);
+            List<string> userRoles = await _userService.GetRolesByUserIdentifierAsync(username, UserIdentifierType.Username);
 
-            foreach (var roleName in userRoles)
-            {
-                var role = await _roleManager.FindByNameAsync(roleName);
-                if (role?.IsAdmin == true)
-                    return true;
-            }
-            return false;
+            if (userRoles.Count == 0)
+                return false;
+
+            return await _roleManager.Roles
+                .AnyAsync(
+                    role =>
+                        role.IsAdmin &&
+                        role.Name != null &&
+                        userRoles.Contains(role.Name),
+                    cancellationToken);
         }
     }
 }

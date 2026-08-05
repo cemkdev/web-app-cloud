@@ -1,6 +1,6 @@
 ﻿namespace WebAppAPI.Application.Features.Users.Commands.AssignRoleToUser
 {
-    public class AssignRoleToUserCommandResponse
+    public sealed class AssignRoleToUserCommandResponse
     {
     }
 }

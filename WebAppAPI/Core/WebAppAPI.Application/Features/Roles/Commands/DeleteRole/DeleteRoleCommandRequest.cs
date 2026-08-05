@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Roles.Commands.DeleteRole
 {
-    public class DeleteRoleCommandRequest : IRequest<DeleteRoleCommandResponse>
+    public sealed class DeleteRoleCommandRequest : IRequest<DeleteRoleCommandResponse>
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

@@ -23,15 +23,18 @@ export class ElementAccessControlService {
   ) { }
 
   async preloadPermissions(userId: string): Promise<void> {
-    const response = await this.authorizationService.getRolesEndpoints();
-    const allRolePermissions = response.rolesEndpoints ?? response;
+    
+    this.permissions = await this.authorizationService.getCurrentUserRoleEndpoints();
 
-    const userRoles = await this.userService.getRolesByUserId(userId);
+    // const response = await this.authorizationService.getRolesEndpoints();
+    // const allRolePermissions = response.rolesEndpoints ?? response;
 
-    const filteredRolePermissions = allRolePermissions.filter(rp =>
-      userRoles.some(userRole => userRole.roleId === rp.roleId && userRole.isAssigned)
-    );
-    this.permissions = filteredRolePermissions ?? [];
+    // const userRoles = await this.userService.getRolesByUserId(userId);
+
+    // const filteredRolePermissions = allRolePermissions.filter(rp =>
+    //   userRoles.some(userRole => userRole.roleId === rp.roleId && userRole.isAssigned)
+    // );
+    // this.permissions = filteredRolePermissions ?? [];
   }
 
   clearPermissions(): void {

@@ -1,8 +1,8 @@
 ﻿namespace WebAppAPI.Application.Features.Users.Commands.CreateUser
 {
-    public class CreateUserCommandResponse
+    public sealed class CreateUserCommandResponse
     {
-        public bool Succeeded { get; set; }
-        public string Message { get; set; }
+        public required bool Succeeded { get; init; }
+        public required string Message { get; init; }
     }
 }

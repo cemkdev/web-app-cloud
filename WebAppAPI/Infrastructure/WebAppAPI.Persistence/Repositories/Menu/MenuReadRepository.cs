@@ -1,14 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebAppAPI.Application.Repositories;
+using WebAppAPI.Domain.Entities;
 using WebAppAPI.Persistence.Contexts;
-using E = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Persistence.Repositories
 {
     public class MenuReadRepository(WebAppAPIDbContext context)
-        : ReadRepository<E.Menu>(context), IMenuReadRepository
+        : ReadRepository<Menu>(context), IMenuReadRepository
     {
-        public Task<List<E.Menu>> GetAllMenusAsync(bool tracking = true)
-            => Query(tracking).ToListAsync();
+        public Task<List<Menu>> GetAllMenusAsync(CancellationToken cancellationToken, bool tracking = false)
+            => Query(tracking)
+                .ToListAsync(cancellationToken);
     }
 }

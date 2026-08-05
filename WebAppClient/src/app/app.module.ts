@@ -43,7 +43,7 @@ export function preloadUserMenusFactory(userAuthService: UserAuthService): () =>
         if (result?.isAuthenticated && result?.isAdmin) {
           await userAuthService.preloadAccessibleMenus();
         }
-        // Giriş yapılmamışsa bile resolve etmek ZORUNDASIN yoksa app yüklenmez
+        
         resolve();
       });
     });
@@ -57,7 +57,7 @@ export function preloadPermissionsFactory(userAuthService: UserAuthService, elem
         if (result?.isAuthenticated) {
           await elementAccessControlServiceService.preloadPermissions(result?.userId);
         }
-        // Giriş yapılmamışsa bile resolve etmek ZORUNDASIN yoksa app yüklenmez
+        
         resolve();
       });
     });

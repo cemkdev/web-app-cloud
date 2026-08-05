@@ -33,6 +33,18 @@ export class AuthorizationEndpointService {
     return data;
   }
 
+  // GET permissions for the currently authenticated user's roles
+  async getCurrentUserRoleEndpoints(): Promise<AssignRoleEndpoint[]> {
+    const response = await firstValueFrom(
+      this.httpClientService.get<{rolesEndpoints: AssignRoleEndpoint[]}>({
+        controller: "endpoints",
+        action: "get-current-user-role-endpoints"
+      })
+    );
+
+    return response.rolesEndpoints;
+  }
+
   // POST
   async assignRoleEndpoints(rolesEndpoints: AssignRoleEndpoint[], successCallBack?: () => void, errorCallBack?: (errorMessage: string) => void) {
     const observable: Observable<any> = this.httpClientService.post({

@@ -1,11 +1,14 @@
 ﻿using MediatR;
-using WebAppAPI.Application.DTOs.Endpoint;
+using System.Text.Json.Serialization;
+using WebAppAPI.Application.Features.Endpoints.DTOs;
 
 namespace WebAppAPI.Application.Features.Endpoints.Commands.AssignRoleEndpoint
 {
-    public class AssignRoleEndpointCommandRequest : IRequest<AssignRoleEndpointCommandResponse>
+    public sealed class AssignRoleEndpointCommandRequest : IRequest<AssignRoleEndpointCommandResponse>
     {
-        public List<RolesEndpointsDto> RolesEndpoints { get; set; }
-        public Type? Type { get; set; }
+        public required List<RolesEndpointsDto> RolesEndpoints { get; init; }
+
+        [JsonIgnore]
+        public Type? ApplicationType { get; set; }
     }
 }

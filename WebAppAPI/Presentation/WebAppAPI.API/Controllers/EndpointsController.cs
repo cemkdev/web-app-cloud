@@ -1,76 +1,95 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
 using WebAppAPI.Application.Features.Endpoints.Commands.AssignRoleEndpoint;
+using WebAppAPI.Application.Features.Endpoints.Queries.GetAccessibleMenuNames;
+using WebAppAPI.Application.Features.Endpoints.Queries.GetCurrentUserRoleEndpoints;
 using WebAppAPI.Application.Features.Endpoints.Queries.GetRolesEndpoints;
+using WebAppAPI.Application.Features.Endpoints.Queries.HasAccessToMenu;
 using WebAppAPI.Domain.Constants;
-using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-    public class EndpointsController : ControllerBase
+    public class EndpointsController(IMediator mediator) : ControllerBase
     {
-        readonly IMediator _mediator;
-        readonly IEndpointService _endpointService;
-        readonly UserManager<AppUser> _userManager;
-        readonly RoleManager<AppRole> _roleManager;
-
-        public EndpointsController(IMediator mediator, IEndpointService endpointService, UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
-        {
-            _mediator = mediator;
-            _endpointService = endpointService;
-            _userManager = userManager;
-            _roleManager = roleManager;
-        }
+        private readonly IMediator _mediator = mediator;
 
         [HttpGet("get-roles-endpoints")]
-        //[AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Endpoints, Definition = "Get Roles and Endpoints", ActionType = ActionType.Read, AdminOnly = true)]
-        public async Task<IActionResult> GetRolesEndpoints([FromQuery] GetRolesEndpointsQueryRequest getRolesEndpointsQueryRequest)
+        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Endpoints, Definition = "Get Roles and Endpoints", ActionType = ActionType.Read, AdminOnly = true)]
+        public async Task<ActionResult<GetRolesEndpointsQueryResponse>> GetRolesEndpoints(CancellationToken cancellationToken)
         {
-            GetRolesEndpointsQueryResponse response = await _mediator.Send(getRolesEndpointsQueryRequest);
+            GetRolesEndpointsQueryResponse response = await _mediator.Send(new GetRolesEndpointsQueryRequest(), cancellationToken);
+
+            return Ok(response);
+        }
+
+        [HttpGet("get-current-user-role-endpoints")]
+        public async Task<ActionResult<GetCurrentUserRoleEndpointsQueryResponse>> GetCurrentUserRoleEndpoints(CancellationToken cancellationToken)
+        {
+            string username = User.Identity?.Name ?? throw new UnauthorizedAccessException();
+
+            GetCurrentUserRoleEndpointsQueryResponse response = await _mediator.Send(
+                new GetCurrentUserRoleEndpointsQueryRequest
+                {
+                    Username = username
+                },
+                cancellationToken);
+
             return Ok(response);
         }
 
         [HttpPost("assign-role-endpoints")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Endpoints, Definition = "Assign Roles to Endpoints", ActionType = ActionType.Write, AdminOnly = true)]
-        public async Task<IActionResult> AssignRoleEndpoints([FromBody] AssignRoleEndpointCommandRequest assignRoleEndpointCommandRequest)
+        public async Task<ActionResult<AssignRoleEndpointCommandResponse>> AssignRoleEndpoints([FromBody] AssignRoleEndpointCommandRequest request, CancellationToken cancellationToken)
         {
-            assignRoleEndpointCommandRequest.Type = typeof(Program);
-            AssignRoleEndpointCommandResponse response = await _mediator.Send(assignRoleEndpointCommandRequest);
+            request.ApplicationType = typeof(Program);
+
+            AssignRoleEndpointCommandResponse response = await _mediator.Send(request, cancellationToken);
+
             return Ok(response);
         }
 
         [HttpGet("has-access")]
-        public async Task<IActionResult> HasAccess([FromQuery] string menuName)
+        public async Task<ActionResult<HasAccessToMenuQueryResponse>> HasAccess([FromQuery] string menuName, CancellationToken cancellationToken)
         {
-            var username = User.Identity.Name;
-            var result = await _endpointService.HasAccessToMenuAsync(username, menuName);
-            return Ok(new { hasAccess = result });
+            string? username = User.Identity?.Name;
+
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized();
+
+            HasAccessToMenuQueryResponse response = await _mediator.Send(
+                new HasAccessToMenuQueryRequest
+                {
+                    Username = username,
+                    MenuName = menuName
+                },
+                cancellationToken);
+
+            return Ok(response);
         }
 
         [HttpGet("accessible-menus")]
-        public async Task<IActionResult> GetAccessibleAdminSidebarMenus()
+        public async Task<ActionResult<List<string>>> GetAccessibleMenuNames(CancellationToken cancellationToken)
         {
-            var username = User.Identity.Name;
+            string? username = User.Identity?.Name;
 
-            var user = await _userManager.FindByNameAsync(username);
-            var roles = await _userManager.GetRolesAsync(user);
-            var roleEntities = _roleManager.Roles.Where(r => roles.Contains(r.Name));
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized();
 
-            var isAdmin = roleEntities.Any(r => r.IsAdmin);
-            if (!isAdmin) // A role without admin access already can't reach this via the screens, but manual requests must also be blocked.
-                return Unauthorized("You are not authorized to access this resource.");
+            List<string> response = await _mediator.Send(
+                new GetAccessibleMenuNamesQueryRequest
+                {
+                    Username = username
+                },
+                cancellationToken);
 
-            var result = await _endpointService.GetAccessibleMenuNamesAsync(username);
-            return Ok(result);
+            return Ok(response);
         }
     }
 }

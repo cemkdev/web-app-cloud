@@ -1,23 +1,25 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Roles.Commands.UpdateRole.DTOs;
 
 namespace WebAppAPI.Application.Features.Roles.Commands.UpdateRole
 {
-    public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommandRequest, UpdateRoleCommandResponse>
+    public sealed class UpdateRoleCommandHandler(IRoleService roleService) : IRequestHandler<UpdateRoleCommandRequest, UpdateRoleCommandResponse>
     {
-        readonly IRoleService _roleService;
-
-        public UpdateRoleCommandHandler(IRoleService roleService)
-        {
-            _roleService = roleService;
-        }
-
         public async Task<UpdateRoleCommandResponse> Handle(UpdateRoleCommandRequest request, CancellationToken cancellationToken)
         {
-            var result = await _roleService.UpdateRoleAsync(request.Id, request.Name, request.IsAdmin);
-            return new()
+            bool succeeded = await roleService.UpdateRoleAsync(
+                new UpdateRoleDto
+                {
+                    Id = request.Id,
+                    Name = request.Name,
+                    IsAdmin = request.IsAdmin
+                },
+                cancellationToken);
+
+            return new UpdateRoleCommandResponse
             {
-                Succeeded = result
+                Succeeded = succeeded
             };
         }
     }

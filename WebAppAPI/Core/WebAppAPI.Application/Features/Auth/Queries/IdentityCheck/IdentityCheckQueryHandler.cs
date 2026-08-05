@@ -8,7 +8,7 @@ namespace WebAppAPI.Application.Features.Auth.Queries.IdentityCheck
     {
         public async Task<IdentityCheckQueryResponse> Handle(IdentityCheckQueryRequest request, CancellationToken cancellationToken)
         {
-            IdentityCheckResultDto identityCheckResult = await authService.IdentityCheckAsync();
+            IdentityCheckResultDto identityCheckResult = await authService.IdentityCheckAsync(cancellationToken);
 
             return new IdentityCheckQueryResponse
             {

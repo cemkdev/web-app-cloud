@@ -100,13 +100,20 @@
               </mat-checkbox>
             </th>
             <td mat-cell *matCellDef="let row" class="select">
+              <span
+              matTooltip="System Administrator cannot be deleted"
+              [matTooltipDisabled]="row.name !== 'SystemAdministrator'"
+              matTooltipPosition="above"
+            >
               <mat-checkbox
                 (click)="$event.stopPropagation()"
                 (change)="$event ? selection.toggle(row) : null"
                 [checked]="selection.isSelected(row)"
+                [disabled]="row.name === 'SystemAdministrator'"
                 [aria-label]="checkboxLabel(row)"
               >
               </mat-checkbox>
+            </span>
             </td>
           </ng-container>
 
@@ -149,18 +156,27 @@
           <ng-container matColumnDef="edit">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let element" class="set-button">
-              <button
-                mat-mini-fab
-                class="no-elevation small"
-                color="warning"
-                (click)="updateRole(element.id)"
+              <span
+              matTooltip="System Administrator cannot be updated"
+              [matTooltipDisabled]="element.name !== 'SystemAdministrator'"
+              matTooltipPosition="above"
               >
-                <mat-icon
-                  matTooltip="Change Role Name"
-                  matTooltipPosition="above"
-                  >edit</mat-icon
+                <button
+                  mat-mini-fab
+                  class="no-elevation small"
+                  color="warning"
+                  (click)="updateRole(element.id)"
+                  [disabled]="element.name === 'SystemAdministrator'"
+                  [style.opacity]="element.name === 'SystemAdministrator' ? '0.5' : '1'"
                 >
-              </button>
+                  <mat-icon
+                    matTooltip="Change Role Name"
+                    [matTooltipDisabled]="element.name === 'SystemAdministrator'"
+                    matTooltipPosition="above"
+                    >edit</mat-icon
+                  >
+                </button>
+              </span>
             </td>
           </ng-container>
 
@@ -173,18 +189,29 @@
               [id]="element.id"
               class="set-button end-column"
             >
-              <button
-                mat-mini-fab
-                class="no-elevation small"
-                color="error"
-                appDelete
-                controller="roles"
-                (callback)="getRoles()"
+              <span
+                matTooltip="System Administrator cannot be deleted"
+                [matTooltipDisabled]="element.name !== 'SystemAdministrator'"
+                matTooltipPosition="above"
               >
-                <mat-icon matTooltip="Delete Role" matTooltipPosition="above"
-                  >delete</mat-icon
+                <button
+                  mat-mini-fab
+                  class="no-elevation small"
+                  color="error"
+                  appDelete
+                  controller="roles"
+                  (callback)="getRoles()"
+                  [disabled]="element.name === 'SystemAdministrator'"
+                  [style.opacity]="element.name === 'SystemAdministrator' ? '0.5' : '1'"
                 >
-              </button>
+                  <mat-icon
+                    matTooltip="Delete Role"
+                    [matTooltipDisabled]="element.name === 'SystemAdministrator'"
+                    matTooltipPosition="above"
+                    >delete</mat-icon
+                  >
+                </button>
+              </span>
             </td>
           </ng-container>
 

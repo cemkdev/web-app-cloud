@@ -55,7 +55,7 @@ export class RoleManagementComponent extends BaseComponent implements OnInit {
 
   isAllSelected() {
     const numSelected = this.selection.selected.length;
-    const numRows = this.dataSource.data.length;
+    const numRows = this.dataSource.data.filter(role => role.name !== 'SystemAdministrator').length;
     return numSelected === numRows;
   }
 
@@ -64,7 +64,7 @@ export class RoleManagementComponent extends BaseComponent implements OnInit {
       this.selection.clear();
       return;
     }
-    this.selection.select(...this.dataSource.data);
+    this.selection.select(...this.dataSource.data.filter(role => role.name !== 'SystemAdministrator'));
   }
 
   checkboxLabel(row?: any): string {

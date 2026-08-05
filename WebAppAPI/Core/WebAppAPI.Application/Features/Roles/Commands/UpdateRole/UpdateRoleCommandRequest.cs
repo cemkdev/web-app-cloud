@@ -2,10 +2,10 @@
 
 namespace WebAppAPI.Application.Features.Roles.Commands.UpdateRole
 {
-    public class UpdateRoleCommandRequest : IRequest<UpdateRoleCommandResponse>
+    public sealed class UpdateRoleCommandRequest : IRequest<UpdateRoleCommandResponse>
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public bool IsAdmin { get; set; }
+        public required string Id { get; init; }
+        public string? Name { get; init; }
+        public bool? IsAdmin { get; init; }
     }
 }

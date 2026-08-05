@@ -1,27 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using WebAppAPI.API.Contracts.Files;
 using WebAppAPI.Application.Options.Storage;
 
 namespace WebAppAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class FilesController : ControllerBase
+    public class FilesController(IOptions<BaseStorageOptions> baseStorageOptions) : ControllerBase
     {
-        readonly BaseStorageOptions _baseStorageOptions;
-
-        public FilesController(IOptions<BaseStorageOptions> baseStorageOptions)
-        {
-            _baseStorageOptions = baseStorageOptions.Value;
-        }
-
         [HttpGet("get-base-storage-url")]
-        public IActionResult GetBaseStorageUrl()
+        public ActionResult<BaseStorageUrlResponse> GetBaseStorageUrl()
         {
-            return Ok(new
+            BaseStorageUrlResponse response = new()
             {
-                Url = _baseStorageOptions.Url
-            });
+                Url = baseStorageOptions.Value.Url
+            };
+
+            return Ok(response);
         }
     }
 }
