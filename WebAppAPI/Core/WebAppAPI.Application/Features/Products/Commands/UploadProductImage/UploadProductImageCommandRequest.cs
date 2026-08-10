@@ -1,11 +1,11 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
+using WebAppAPI.Application.Abstractions.Storage.Models;
 
 namespace WebAppAPI.Application.Features.Products.Commands.UploadProductImage
 {
-    public class UploadProductImageCommandRequest : IRequest<UploadProductImageCommandResponse>
+    public sealed class UploadProductImageCommandRequest : IRequest
     {
-        public string Id { get; set; }
-        public IFormFileCollection? Files { get; set; }
+        public required string Id { get; init; }
+        public required IReadOnlyCollection<StorageUploadFile> Files { get; init; }
     }
 }

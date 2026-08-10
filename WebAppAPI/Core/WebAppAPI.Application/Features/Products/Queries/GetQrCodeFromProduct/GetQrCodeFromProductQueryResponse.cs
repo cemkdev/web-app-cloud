@@ -1,7 +1,7 @@
 ﻿namespace WebAppAPI.Application.Features.Products.Queries.GetQrCodeFromProduct
 {
-    public class GetQrCodeFromProductQueryResponse
+    public sealed class GetQrCodeFromProductQueryResponse
     {
-        public byte[] QrCode { get; set; }
+        public required byte[] QrCode { get; init; }
     }
 }

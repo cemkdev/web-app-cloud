@@ -2,13 +2,13 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.UpdateProduct
 {
-    public class UpdateProductCommandRequest : IRequest<UpdateProductCommandResponse>
+    public sealed class UpdateProductCommandRequest : IRequest
     {
-        public string Id { get; set; }
-        public string? Name { get; set; }
-        public int? Stock { get; set; }
-        public float? Price { get; set; }
-        public string? Title { get; set; }
-        public string? Description { get; set; }
+        public required string Id { get; init; }
+        public string? Name { get; init; }
+        public int? Stock { get; init; }
+        public float? Price { get; init; }
+        public string? Title { get; init; }
+        public string? Description { get; init; }
     }
 }

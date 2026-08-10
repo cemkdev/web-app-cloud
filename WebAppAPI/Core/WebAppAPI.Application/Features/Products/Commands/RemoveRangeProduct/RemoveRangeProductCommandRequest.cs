@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.RemoveRangeProduct
 {
-    public class RemoveRangeProductCommandRequest : IRequest<RemoveRangeProductCommandResponse>
+    public sealed class RemoveRangeProductCommandRequest : IRequest
     {
-        public List<string> ProductIds { get; set; }
+        public required IReadOnlyCollection<string> ProductIds { get; init; }
     }
 }

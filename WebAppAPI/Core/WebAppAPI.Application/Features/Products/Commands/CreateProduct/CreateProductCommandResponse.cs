@@ -1,7 +1,7 @@
 ﻿namespace WebAppAPI.Application.Features.Products.Commands.CreateProduct
 {
-    public class CreateProductCommandResponse
+    public sealed class CreateProductCommandResponse
     {
-
+        public required Guid Id { get; init; }
     }
 }

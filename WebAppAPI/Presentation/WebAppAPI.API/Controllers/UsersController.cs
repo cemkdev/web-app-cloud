@@ -44,7 +44,7 @@ namespace WebAppAPI.API.Controllers
 
         [HttpGet("get-roles-by-userid/{userId}")]
         [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-        //[AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Users, Definition = "Get Roles By UserId", ActionType = ActionType.Read, AdminOnly = true)]
+        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Users, Definition = "Get Roles By UserId", ActionType = ActionType.Read, AdminOnly = true)]
         public async Task<ActionResult<List<GetRolesByUserIdQueryResponse>>> GetRolesByUserId([FromRoute] string userId, CancellationToken cancellationToken)
         {
             List<GetRolesByUserIdQueryResponse> response = await _mediator.Send(

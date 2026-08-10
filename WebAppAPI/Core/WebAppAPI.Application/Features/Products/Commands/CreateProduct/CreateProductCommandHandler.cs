@@ -1,34 +1,38 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Abstractions.Hubs;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Products.Commands.CreateProduct.DTOs;
+using WebAppAPI.Application.Features.Products.Notifications;
 
 namespace WebAppAPI.Application.Features.Products.Commands.CreateProduct
 {
-    public class CreateProductCommandHandler : IRequestHandler<CreateProductCommandRequest, CreateProductCommandResponse>
+    public sealed class CreateProductCommandHandler(IProductService productService, IMediator mediator)
+        : IRequestHandler<CreateProductCommandRequest, CreateProductCommandResponse>
     {
-        readonly IProductService _productService;
-        readonly IProductHubService _productHubService;
-
-        public CreateProductCommandHandler(IProductService productService, IProductHubService productHubService)
-        {
-            _productService = productService;
-            _productHubService = productHubService;
-        }
-
         public async Task<CreateProductCommandResponse> Handle(CreateProductCommandRequest request, CancellationToken cancellationToken)
         {
-            await _productService.CreateProductAsync(new()
+            Guid productId = await productService.CreateProductAsync(
+                new CreateProductDto
+                {
+                    Name = request.Name,
+                    Stock = request.Stock,
+                    Price = request.Price,
+                    Title = request.Title,
+                    Description = request.Description
+                },
+                cancellationToken);
+
+            await mediator.Publish(
+                new ProductCreatedNotification
+                {
+                    ProductId = productId,
+                    ProductName = request.Name
+                },
+                cancellationToken);
+
+            return new CreateProductCommandResponse
             {
-                Name = request.Name,
-                Stock = request.Stock,
-                Price = request.Price,
-                Title = request.Title,
-                Description = request.Description
-            });
-
-            await _productHubService.ProductAddedMessageAsync($"'{request.Name}' has been added.");
-
-            return new();
+                Id = productId
+            };
         }
     }
 }

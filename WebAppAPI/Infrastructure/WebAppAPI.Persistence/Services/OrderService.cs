@@ -123,7 +123,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(orderId, out Guid orderGuid))
                 throw new Exception("Invalid order id.");
 
-            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, tracking: true);
+            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, CancellationToken.None, tracking: true);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
@@ -175,7 +175,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(orderId, out var orderGuid))
                 throw new Exception("Invalid order id.");
 
-            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, tracking: false);
+            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, CancellationToken.None, tracking: false);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
@@ -224,11 +224,11 @@ namespace WebAppAPI.Persistence.Services
 
         private async Task DeleteOrderAggregateAsync(Guid orderId)
         {
-            Order? order = await _orderReadRepository.GetByIdAsync(orderId, tracking: true);
+            Order? order = await _orderReadRepository.GetByIdAsync(orderId, CancellationToken.None, tracking: true);
             if (order == null)
                 throw new Exception("An Order with the specified ID could not be found.");
 
-            Basket? basket = await _basketReadRepository.GetByIdAsync(orderId, tracking: true);
+            Basket? basket = await _basketReadRepository.GetByIdAsync(orderId, CancellationToken.None, tracking: true);
             if (basket == null)
                 throw new Exception("A Basket with the specified ID could not be found.");
 

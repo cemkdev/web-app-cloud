@@ -3,20 +3,14 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Products.Queries.GetQrCodeFromProduct
 {
-    public class GetQrCodeFromProductQueryHandler : IRequestHandler<GetQrCodeFromProductQueryRequest, GetQrCodeFromProductQueryResponse>
+    public sealed class GetQrCodeFromProductQueryHandler(IProductService productService)
+        : IRequestHandler<GetQrCodeFromProductQueryRequest, GetQrCodeFromProductQueryResponse>
     {
-        readonly IProductService _productService;
-
-        public GetQrCodeFromProductQueryHandler(IProductService productService)
-        {
-            _productService = productService;
-        }
-
         public async Task<GetQrCodeFromProductQueryResponse> Handle(GetQrCodeFromProductQueryRequest request, CancellationToken cancellationToken)
         {
-            byte[] qrCode = await _productService.QrCodeFromProductAsync(request.ProductId);
+            byte[] qrCode = await productService.QrCodeFromProductAsync(request.ProductId, cancellationToken);
 
-            return new()
+            return new GetQrCodeFromProductQueryResponse
             {
                 QrCode = qrCode
             };

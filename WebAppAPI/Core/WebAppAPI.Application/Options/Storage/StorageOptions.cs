@@ -4,7 +4,7 @@
     {
         public const string SectionName = "Storage";
 
-        public StorageProvider Provider { get; set; } = StorageProvider.Local;
+        public StorageProvider Provider { get; set; } = StorageProvider.LocalStorage;
 
         public AzureStorageOptions Azure { get; set; } = new();
     }

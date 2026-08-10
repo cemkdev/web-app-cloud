@@ -1,4 +1,5 @@
 ﻿using WebAppAPI.Application;
+using WebAppAPI.Application.Abstractions.Storage;
 using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Infrastructure;
 using WebAppAPI.Infrastructure.Services.Storage.Azure;
@@ -28,19 +29,19 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
         #region Helper
         private static void AddConfiguredStorage(this IServiceCollection services, IConfiguration configuration)
         {
-            var storageOptions = configuration
-                                    .GetSection(StorageOptions.SectionName)
-                                    .Get<StorageOptions>()
-                                    ?? throw new InvalidOperationException($"{StorageOptions.SectionName} configuration is missing.");
+            StorageOptions storageOptions = configuration
+                .GetSection(StorageOptions.SectionName)
+                .Get<StorageOptions>()
+                    ?? throw new InvalidOperationException($"{StorageOptions.SectionName} configuration is missing.");
 
             switch (storageOptions.Provider)
             {
-                case StorageProvider.Local:
-                    services.AddStorage<LocalStorage>();
+                case StorageProvider.LocalStorage:
+                    services.AddScoped<IStorageService, LocalStorageProvider>();
                     break;
 
-                case StorageProvider.Azure:
-                    services.AddStorage<AzureStorage>();
+                case StorageProvider.AzureStorage:
+                    services.AddScoped<IStorageService, AzureStorageProvider>();
                     break;
 
                 default:

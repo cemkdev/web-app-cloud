@@ -3,16 +3,21 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Infrastructure.Services
 {
-    public class QRCodeService : IQRCodeService
+    public sealed class QRCodeService : IQRCodeService
     {
-        public byte[] GenerateQRCode(string code)
+        public byte[] Generate(string content)
         {
-            QRCodeGenerator qRCodeGenerator = new();
-            QRCodeData data = qRCodeGenerator.CreateQrCode(code, QRCodeGenerator.ECCLevel.Q);
-            PngByteQRCode qRCode = new(data);
-            byte[] byteGraphic = qRCode.GetGraphic(10, new byte[] { 84, 99, 71 }, new byte[] { 240, 240, 240 });
+            ArgumentException.ThrowIfNullOrWhiteSpace(content);
 
-            return byteGraphic;
+            using QRCodeGenerator generator = new();
+            using QRCodeData data = generator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
+
+            using PngByteQRCode qRCode = new(data);
+
+            return qRCode.GetGraphic(
+                10,
+                [84, 99, 71],
+                [240, 240, 240]);
         }
     }
 }

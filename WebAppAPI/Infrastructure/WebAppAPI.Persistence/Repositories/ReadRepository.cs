@@ -16,7 +16,16 @@ namespace WebAppAPI.Persistence.Repositories
             return tracking ? query : query.AsNoTracking();
         }
 
-        public async Task<T?> GetByIdAsync(Guid id, bool tracking = false)
-            => await Query(tracking).FirstOrDefaultAsync(data => data.Id == id);
+        public Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken, bool tracking = false)
+            => Query(tracking)
+                .FirstOrDefaultAsync(
+                    entity => entity.Id == id,
+                    cancellationToken);
+
+        public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken)
+            => Query(tracking: false)
+                .AnyAsync(
+                    entity => entity.Id == id,
+                    cancellationToken);
     }
 }

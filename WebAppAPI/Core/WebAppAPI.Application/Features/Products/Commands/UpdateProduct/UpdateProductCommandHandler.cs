@@ -1,20 +1,15 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Products.Commands.UpdateProduct.DTOs;
 
 namespace WebAppAPI.Application.Features.Products.Commands.UpdateProduct
 {
-    public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommandRequest, UpdateProductCommandResponse>
+    public sealed class UpdateProductCommandHandler(IProductService productService) : IRequestHandler<UpdateProductCommandRequest>
     {
-        readonly IProductService _productService;
-
-        public UpdateProductCommandHandler(IProductService productService)
+        public async Task Handle(UpdateProductCommandRequest request, CancellationToken cancellationToken)
         {
-            _productService = productService;
-        }
-
-        public async Task<UpdateProductCommandResponse> Handle(UpdateProductCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _productService.UpdateProductAsync(new()
+            await productService.UpdateProductAsync(
+            new UpdateProductDto
             {
                 Id = request.Id,
                 Name = request.Name,
@@ -22,9 +17,8 @@ namespace WebAppAPI.Application.Features.Products.Commands.UpdateProduct
                 Price = request.Price,
                 Title = request.Title,
                 Description = request.Description
-            });
-
-            return new();
+            },
+            cancellationToken);
         }
     }
 }

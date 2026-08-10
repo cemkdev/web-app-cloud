@@ -406,7 +406,7 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("5476c1d3-94d4-4f0f-8dba-25b1c51217fb"), ActionType="Write",  HttpType="POST",   Definition="Add Item to Basket",               Code="POST.Write.AddItemtoBasket",               AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
                 new Endpoint { Id=Guid.Parse("3da24ddd-984c-470c-8cc6-9db518f68ca2"), ActionType="Update", HttpType="PUT",    Definition="Update Basket Item Quantity",      Code="PUT.Update.UpdateBasketItemQuantity",      AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
                 new Endpoint { Id=Guid.Parse("42508967-c22b-4e14-91d0-964524f19c00"), ActionType="Delete", HttpType="DELETE", Definition="Remove Basket Item",               Code="DELETE.Delete.RemoveBasketItem",           AdminOnly=false, Menu = menusById[Guid.Parse("99cf43a4-c3e4-4ff7-bc08-f004c19fd030")] },
-                new Endpoint { Id=Guid.Parse("8a0c1d16-acb3-49d9-81eb-cbe667771457"), ActionType="Read",   HttpType="GET",    Definition = "Get Roles and Endpoints",        Code = "GET.Read.GetRolesandEndpoints",          AdminOnly = true, Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")]},
+                new Endpoint { Id=Guid.Parse("8a0c1d16-acb3-49d9-81eb-cbe667771457"), ActionType="Read",   HttpType="GET",    Definition = "Get Roles and Endpoints",        Code = "GET.Read.GetRolesandEndpoints",          AdminOnly=true,  Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")]},
                 new Endpoint { Id=Guid.Parse("46487cb5-8535-4614-8c6f-38c9700911bf"), ActionType="Write",  HttpType="POST",   Definition="Assign Roles to Endpoints",        Code="POST.Write.AssignRolestoEndpoints",        AdminOnly=true,  Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")] },
                 new Endpoint { Id=Guid.Parse("22fc12e2-48f2-4efd-beae-ce9584e6979e"), ActionType="Read",   HttpType="GET",    Definition="Get All Orders",                   Code="GET.Read.GetAllOrders",                    AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("94cc08dc-d762-4a3a-9160-fbf61e0209d6"), ActionType="Read",   HttpType="GET",    Definition="Get Order by Id",                  Code="GET.Read.GetOrderbyId",                    AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
@@ -415,6 +415,7 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("49c9b622-82bb-4ff0-bdea-777158180c17"), ActionType="Delete", HttpType="POST",   Definition="Delete Range of Order",            Code="POST.Delete.DeleteRangeofOrder",           AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("5638d377-c52e-4ea6-aa15-52f7ed3361d8"), ActionType="Update", HttpType="PUT",    Definition="Update Order Status",              Code="PUT.Update.UpdateOrderStatus",             AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("a9c8f7a4-a0aa-4564-b03d-1941838fdabb"), ActionType="Read",   HttpType="GET",    Definition="Get Order Status History by Id",   Code="GET.Read.GetOrderStatusHistorybyId",       AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("c706e3f8-a117-49b0-9ab0-9fa478ad02fe"), ActionType="Read",   HttpType="GET",    Definition="Get Product By Id",                Code="GET.Read.GetProductById",                  AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
                 new Endpoint { Id=Guid.Parse("9093e984-c237-411f-bd39-6c644736bd56"), ActionType="Write",  HttpType="POST",   Definition="Create Product",                   Code="POST.Write.CreateProduct",                 AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
                 new Endpoint { Id=Guid.Parse("3a7de741-7b65-45c2-84af-37eb15900f4b"), ActionType="Update", HttpType="PUT",    Definition="Update Product",                   Code="PUT.Update.UpdateProduct",                 AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
                 new Endpoint { Id=Guid.Parse("d2e8ddf2-cffa-47b9-b45b-519e18dcc6be"), ActionType="Delete", HttpType="DELETE", Definition="Delete Product",                   Code="DELETE.Delete.DeleteProduct",              AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
@@ -426,10 +427,11 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("d983cdf3-8e10-401e-88b0-722beb78b168"), ActionType="Read",   HttpType="GET",    Definition="Get Roles",                        Code="GET.Read.GetRoles",                        AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("09b85d6b-51d1-46ec-8f5e-76f6303ac1fb"), ActionType="Read",   HttpType="GET",    Definition="Get Role By Id",                   Code="GET.Read.GetRoleById",                     AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("32907798-0b30-4e00-b006-00e2a3c4c4c3"), ActionType="Write",  HttpType="POST",   Definition="Create Role",                      Code="POST.Write.CreateRole",                    AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
-                new Endpoint { Id=Guid.Parse("eb9b72d0-72d4-4a3f-a267-73e118247cfa"), ActionType="Update", HttpType="PATCH",  Definition="Update Role",                      Code="PATCH.Update.UpdateRole",                    AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
+                new Endpoint { Id=Guid.Parse("eb9b72d0-72d4-4a3f-a267-73e118247cfa"), ActionType="Update", HttpType="PATCH",  Definition="Update Role",                      Code="PATCH.Update.UpdateRole",                  AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("c3a10d8c-dc06-4ee9-812c-59f84dae661e"), ActionType="Delete", HttpType="DELETE", Definition="Delete Role",                      Code="DELETE.Delete.DeleteRole",                 AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("e7c4a0e0-747b-48ed-983c-4b65fbad074a"), ActionType="Delete", HttpType="POST",   Definition="Delete Range of Role",             Code="POST.Delete.DeleteRangeofRole",            AdminOnly=true,  Menu = menusById[Guid.Parse("230f3782-7927-4bef-be44-5d19ab8e4c7b")] },
                 new Endpoint { Id=Guid.Parse("793b43f2-a533-4f5a-abd4-96c12788925b"), ActionType="Read",   HttpType="GET",    Definition="Get All Users",                    Code="GET.Read.GetAllUsers",                     AdminOnly=true,  Menu = menusById[Guid.Parse("569c46f7-8af4-40f5-bf08-0ab17a7a3a3e")] },
+                new Endpoint { Id=Guid.Parse("6bcb1579-77ba-4e79-98b3-37fa050ed339"), ActionType="Read",   HttpType="GET",    Definition="Get Roles By UserId",              Code="GET.Read.GetRolesByUserId",                AdminOnly=true,  Menu = menusById[Guid.Parse("569c46f7-8af4-40f5-bf08-0ab17a7a3a3e")] },
                 new Endpoint { Id=Guid.Parse("b62126cf-c3ae-43a9-b17f-c36404e0021b"), ActionType="Write",  HttpType="POST",   Definition="Assign Role To User",              Code="POST.Write.AssignRoleToUser",              AdminOnly=true,  Menu = menusById[Guid.Parse("569c46f7-8af4-40f5-bf08-0ab17a7a3a3e")] }
             }.Select((endpoint, index) => WithCreated(endpoint, DemoDate(3, 19, 8, 20).AddHours(index * 3 + index % 5))));
             await db.SaveChangesAsync();
@@ -444,6 +446,7 @@ namespace WebAppAPI.Persistence.Seeding
                 ["GET.Read.GetRolesandEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["POST.Write.AssignRolestoEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["GET.Read.GetAllUsers"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetRolesByUserId"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["POST.Write.AssignRolestoEndpoints"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["DELETE.Delete.DeleteOrder"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["POST.Delete.DeleteRangeofOrder"] = [SystemBootstrapConstants.SystemAdministratorRoleName],
@@ -462,6 +465,7 @@ namespace WebAppAPI.Persistence.Seeding
                 ["POST.Write.CreateOrder"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["PUT.Update.UpdateOrderStatus"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["GET.Read.GetOrderStatusHistorybyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetProductById"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["POST.Write.CreateProduct"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["PUT.Update.UpdateProduct"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["DELETE.Delete.DeleteProductImage"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
@@ -504,76 +508,77 @@ namespace WebAppAPI.Persistence.Seeding
             var fileMeta = new Dictionary<Guid, (string FileName, string Path, string Storage, bool Cover)>
             {
                 #region Azure Storage
-                //// fb7ef7b8... (Galaxy Z Fold 7 seti)
-                //[Guid.Parse("3ee62975-9603-4c57-8d08-b4762a401938")] = ("galaxy-z-fold7-2.jpg", "images/galaxy-z-fold7-2.jpg", "AzureStorage", false),
-                //[Guid.Parse("bafae95c-3a46-4814-9ef8-93d2dcb5d9e8")] = ("galaxy-z-fold7-4.jpg", "images/galaxy-z-fold7-4.jpg", "AzureStorage", false),
-                //[Guid.Parse("eaa1173a-5c12-48a8-9f61-02d46c3cd693")] = ("galaxy-z-fold7-5.jpg", "images/galaxy-z-fold7-5.jpg", "AzureStorage", false),
-                //[Guid.Parse("c6636140-72c7-4aaf-a41d-7ebab27934ff")] = ("galaxy-z-fold7-3.jpg", "images/galaxy-z-fold7-3.jpg", "AzureStorage", true),
-                //[Guid.Parse("e1cbde9f-c164-4f9f-8220-6f5e9306060e")] = ("galaxy-z-fold7.jpg", "images/galaxy-z-fold7.jpg", "AzureStorage", false),
+                //// fb7ef7b8... (Galaxy Z Fold 7 product image set)
+                //[Guid.Parse("3ee62975-9603-4c57-8d08-b4762a401938")] = ("galaxy-z-fold7-2.jpg", "product-images/galaxy-z-fold7-2.jpg", "AzureStorage", false),
+                //[Guid.Parse("bafae95c-3a46-4814-9ef8-93d2dcb5d9e8")] = ("galaxy-z-fold7-4.jpg", "product-images/galaxy-z-fold7-4.jpg", "AzureStorage", false),
+                //[Guid.Parse("eaa1173a-5c12-48a8-9f61-02d46c3cd693")] = ("galaxy-z-fold7-5.jpg", "product-images/galaxy-z-fold7-5.jpg", "AzureStorage", false),
+                //[Guid.Parse("c6636140-72c7-4aaf-a41d-7ebab27934ff")] = ("galaxy-z-fold7-3.jpg", "product-images/galaxy-z-fold7-3.jpg", "AzureStorage", true),
+                //[Guid.Parse("e1cbde9f-c164-4f9f-8220-6f5e9306060e")] = ("galaxy-z-fold7.jpg", "product-images/galaxy-z-fold7.jpg", "AzureStorage", false),
 
-                //// 39a3b77f... (Galaxy S25 seti)
-                //[Guid.Parse("035be0d7-5d1e-4bf2-a76c-9a9c7dde60f7")] = ("galaxy-s25-2.jpg", "images/galaxy-s25-2.jpg", "AzureStorage", false),
-                //[Guid.Parse("20bad5d5-d1fd-4e14-8930-59e177eef2b7")] = ("galaxy-s25-4.jpg", "images/galaxy-s25-4.jpg", "AzureStorage", false),
-                //[Guid.Parse("96df53ca-542e-4e9e-9c59-8210eb3912a9")] = ("galaxy-s25.jpg", "images/galaxy-s25.jpg", "AzureStorage", true),
-                //[Guid.Parse("a6f6f2b6-b145-46aa-8146-173565a87b30")] = ("galaxy-s25-3.jpg", "images/galaxy-s25-3.jpg", "AzureStorage", false),
+                //// 39a3b77f... (Galaxy S25 product image set)
+                //[Guid.Parse("035be0d7-5d1e-4bf2-a76c-9a9c7dde60f7")] = ("galaxy-s25-2.jpg", "product-images/galaxy-s25-2.jpg", "AzureStorage", false),
+                //[Guid.Parse("20bad5d5-d1fd-4e14-8930-59e177eef2b7")] = ("galaxy-s25-4.jpg", "product-images/galaxy-s25-4.jpg", "AzureStorage", false),
+                //[Guid.Parse("96df53ca-542e-4e9e-9c59-8210eb3912a9")] = ("galaxy-s25.jpg", "product-images/galaxy-s25.jpg", "AzureStorage", true),
+                //[Guid.Parse("a6f6f2b6-b145-46aa-8146-173565a87b30")] = ("galaxy-s25-3.jpg", "product-images/galaxy-s25-3.jpg", "AzureStorage", false),
 
-                //// e38194b3... (Galaxy Z Flip 7 seti)
-                //[Guid.Parse("125b89b6-9662-4156-90e0-1b604af95683")] = ("galaxy-zflip7-2.jpg", "images/galaxy-zflip7-2.jpg", "AzureStorage", false),
-                //[Guid.Parse("7056667a-48aa-468d-b748-269480488e41")] = ("galaxy-zflip7-4.jpg", "images/galaxy-zflip7-4.jpg", "AzureStorage", false),
-                //[Guid.Parse("72d44712-446e-4d36-9ec7-ce1e8cd9b176")] = ("galaxy-zflip7-3.jpg", "images/galaxy-zflip7-3.jpg", "AzureStorage", false),
-                //[Guid.Parse("86387ae5-a15c-43e7-b618-5ebf055d2219")] = ("galaxy-zflip7.jpg", "images/galaxy-zflip7.jpg", "AzureStorage", true),
-                //[Guid.Parse("b0148456-e534-42c6-ab9c-c0802772996d")] = ("galaxy-zflip7-5.jpg", "images/galaxy-zflip7-5.jpg", "AzureStorage", false),
+                //// e38194b3... (Galaxy Z Flip 7 product image set)
+                //[Guid.Parse("125b89b6-9662-4156-90e0-1b604af95683")] = ("galaxy-zflip7-2.jpg", "product-images/galaxy-zflip7-2.jpg", "AzureStorage", false),
+                //[Guid.Parse("7056667a-48aa-468d-b748-269480488e41")] = ("galaxy-zflip7-4.jpg", "product-images/galaxy-zflip7-4.jpg", "AzureStorage", false),
+                //[Guid.Parse("72d44712-446e-4d36-9ec7-ce1e8cd9b176")] = ("galaxy-zflip7-3.jpg", "product-images/galaxy-zflip7-3.jpg", "AzureStorage", false),
+                //[Guid.Parse("86387ae5-a15c-43e7-b618-5ebf055d2219")] = ("galaxy-zflip7.jpg", "product-images/galaxy-zflip7.jpg", "AzureStorage", true),
+                //[Guid.Parse("b0148456-e534-42c6-ab9c-c0802772996d")] = ("galaxy-zflip7-5.jpg", "product-images/galaxy-zflip7-5.jpg", "AzureStorage", false),
 
-                //// a0e7e2e1... (iPhone 17 Pro Deep Blue seti)
-                //[Guid.Parse("4499b376-111e-41e9-82e9-fc48bedf1892")] = ("iphone-17-pro-deepblue.jpg", "images/iphone-17-pro-deepblue.jpg", "AzureStorage", true),
-                //[Guid.Parse("74ff1581-f5a6-44a6-8999-50aa8a966663")] = ("iphone-17-pro-deepblue-3.jpg", "images/iphone-17-pro-deepblue-3.jpg", "AzureStorage", false),
-                //[Guid.Parse("e6ce807c-878b-4a2c-8040-750b30b28a07")] = ("iphone-17-pro-deepblue-2.jpg", "images/iphone-17-pro-deepblue-2.jpg", "AzureStorage", false),
+                //// a0e7e2e1... (iPhone 17 Pro Deep Blue product image set)
+                //[Guid.Parse("4499b376-111e-41e9-82e9-fc48bedf1892")] = ("iphone-17-pro-deepblue.jpg", "product-images/iphone-17-pro-deepblue.jpg", "AzureStorage", true),
+                //[Guid.Parse("74ff1581-f5a6-44a6-8999-50aa8a966663")] = ("iphone-17-pro-deepblue-3.jpg", "product-images/iphone-17-pro-deepblue-3.jpg", "AzureStorage", false),
+                //[Guid.Parse("e6ce807c-878b-4a2c-8040-750b30b28a07")] = ("iphone-17-pro-deepblue-2.jpg", "product-images/iphone-17-pro-deepblue-2.jpg", "AzureStorage", false),
 
-                //// ee871416... (iPhone 16 seti)
-                //[Guid.Parse("1b34cbb7-5aa7-48cd-91e5-bfa12b512009")] = ("iphone-16.jpg", "images/iphone-16.jpg", "AzureStorage", true),
-                //[Guid.Parse("7ccba00d-fd06-46f0-be31-ab589ca0c865")] = ("iphone-16-2.jpg", "images/iphone-16-2.jpg", "AzureStorage", false),
-                //[Guid.Parse("b3ebd6d6-1c25-482a-91b9-d74a3d8c21aa")] = ("iphone-16-3.jpg", "images/iphone-16-3.jpg", "AzureStorage", false),
+                //// ee871416... (iPhone 16 product image set)
+                //[Guid.Parse("1b34cbb7-5aa7-48cd-91e5-bfa12b512009")] = ("iphone-16.jpg", "product-images/iphone-16.jpg", "AzureStorage", true),
+                //[Guid.Parse("7ccba00d-fd06-46f0-be31-ab589ca0c865")] = ("iphone-16-2.jpg", "product-images/iphone-16-2.jpg", "AzureStorage", false),
+                //[Guid.Parse("b3ebd6d6-1c25-482a-91b9-d74a3d8c21aa")] = ("iphone-16-3.jpg", "product-images/iphone-16-3.jpg", "AzureStorage", false),
 
-                //// de912c56... (Pink Phone seti)
-                //[Guid.Parse("6bb3709f-7d84-4d41-afc4-45fe2cde5ff9")] = ("pink-phone-1.jpg", "images/pink-phone-1.jpg", "AzureStorage", true),
-                //[Guid.Parse("3b749096-08c1-441d-8eb4-79b252f7752c")] = ("pink-phone-2.jpg", "images/pink-phone-2.jpg", "AzureStorage", false),
-                //[Guid.Parse("c868a86b-bd79-46c6-9f6f-9f2df3a878cc")] = ("pink-phone-3.jpg", "images/pink-phone-3.jpg", "AzureStorage", false),
+                //// de912c56... (Pink Phone product image set)
+                //[Guid.Parse("6bb3709f-7d84-4d41-afc4-45fe2cde5ff9")] = ("pink-phone-1.jpg", "product-images/pink-phone-1.jpg", "AzureStorage", true),
+                //[Guid.Parse("3b749096-08c1-441d-8eb4-79b252f7752c")] = ("pink-phone-2.jpg", "product-images/pink-phone-2.jpg", "AzureStorage", false),
+                //[Guid.Parse("c868a86b-bd79-46c6-9f6f-9f2df3a878cc")] = ("pink-phone-3.jpg", "product-images/pink-phone-3.jpg", "AzureStorage", false),
                 #endregion
+
                 #region Local Storage
-                // fb7ef7b8... (Galaxy Z Fold 7 seti)
-                [Guid.Parse("3ee62975-9603-4c57-8d08-b4762a401938")] = ("galaxy-z-fold7-2.jpg", "images\\galaxy-z-fold7-2.jpg", "LocalStorage", false),
-                [Guid.Parse("bafae95c-3a46-4814-9ef8-93d2dcb5d9e8")] = ("galaxy-z-fold7-4.jpg", "images\\galaxy-z-fold7-4.jpg", "LocalStorage", false),
-                [Guid.Parse("eaa1173a-5c12-48a8-9f61-02d46c3cd693")] = ("galaxy-z-fold7-5.jpg", "images\\galaxy-z-fold7-5.jpg", "LocalStorage", false),
-                [Guid.Parse("c6636140-72c7-4aaf-a41d-7ebab27934ff")] = ("galaxy-z-fold7-3.jpg", "images\\galaxy-z-fold7-3.jpg", "LocalStorage", true),
-                [Guid.Parse("e1cbde9f-c164-4f9f-8220-6f5e9306060e")] = ("galaxy-z-fold7.jpg", "images\\galaxy-z-fold7.jpg", "LocalStorage", false),
+                // fb7ef7b8... (Galaxy Z Fold 7 product image set)
+                [Guid.Parse("3ee62975-9603-4c57-8d08-b4762a401938")] = ("galaxy-z-fold7-2.jpg", "product-images/galaxy-z-fold7-2.jpg", "LocalStorage", false),
+                [Guid.Parse("bafae95c-3a46-4814-9ef8-93d2dcb5d9e8")] = ("galaxy-z-fold7-4.jpg", "product-images/galaxy-z-fold7-4.jpg", "LocalStorage", false),
+                [Guid.Parse("eaa1173a-5c12-48a8-9f61-02d46c3cd693")] = ("galaxy-z-fold7-5.jpg", "product-images/galaxy-z-fold7-5.jpg", "LocalStorage", false),
+                [Guid.Parse("c6636140-72c7-4aaf-a41d-7ebab27934ff")] = ("galaxy-z-fold7-3.jpg", "product-images/galaxy-z-fold7-3.jpg", "LocalStorage", true),
+                [Guid.Parse("e1cbde9f-c164-4f9f-8220-6f5e9306060e")] = ("galaxy-z-fold7.jpg", "product-images/galaxy-z-fold7.jpg", "LocalStorage", false),
 
-                // 39a3b77f... (Galaxy S25 seti)
-                [Guid.Parse("035be0d7-5d1e-4bf2-a76c-9a9c7dde60f7")] = ("galaxy-s25-2.jpg", "images\\galaxy-s25-2.jpg", "LocalStorage", false),
-                [Guid.Parse("20bad5d5-d1fd-4e14-8930-59e177eef2b7")] = ("galaxy-s25-4.jpg", "images\\galaxy-s25-4.jpg", "LocalStorage", false),
-                [Guid.Parse("96df53ca-542e-4e9e-9c59-8210eb3912a9")] = ("galaxy-s25.jpg", "images\\galaxy-s25.jpg", "LocalStorage", true),
-                [Guid.Parse("a6f6f2b6-b145-46aa-8146-173565a87b30")] = ("galaxy-s25-3.jpg", "images\\galaxy-s25-3.jpg", "LocalStorage", false),
+                // 39a3b77f... (Galaxy S25 product image set)
+                [Guid.Parse("035be0d7-5d1e-4bf2-a76c-9a9c7dde60f7")] = ("galaxy-s25-2.jpg", "product-images/galaxy-s25-2.jpg", "LocalStorage", false),
+                [Guid.Parse("20bad5d5-d1fd-4e14-8930-59e177eef2b7")] = ("galaxy-s25-4.jpg", "product-images/galaxy-s25-4.jpg", "LocalStorage", false),
+                [Guid.Parse("96df53ca-542e-4e9e-9c59-8210eb3912a9")] = ("galaxy-s25.jpg", "product-images/galaxy-s25.jpg", "LocalStorage", true),
+                [Guid.Parse("a6f6f2b6-b145-46aa-8146-173565a87b30")] = ("galaxy-s25-3.jpg", "product-images/galaxy-s25-3.jpg", "LocalStorage", false),
 
-                // e38194b3... (Galaxy Z Flip 7 seti)
-                [Guid.Parse("125b89b6-9662-4156-90e0-1b604af95683")] = ("galaxy-zflip7-2.jpg", "images\\galaxy-zflip7-2.jpg", "LocalStorage", false),
-                [Guid.Parse("7056667a-48aa-468d-b748-269480488e41")] = ("galaxy-zflip7-4.jpg", "images\\galaxy-zflip7-4.jpg", "LocalStorage", false),
-                [Guid.Parse("72d44712-446e-4d36-9ec7-ce1e8cd9b176")] = ("galaxy-zflip7-3.jpg", "images\\galaxy-zflip7-3.jpg", "LocalStorage", false),
-                [Guid.Parse("86387ae5-a15c-43e7-b618-5ebf055d2219")] = ("galaxy-zflip7.jpg", "images\\galaxy-zflip7.jpg", "LocalStorage", true),
-                [Guid.Parse("b0148456-e534-42c6-ab9c-c0802772996d")] = ("galaxy-zflip7-5.jpg", "images\\galaxy-zflip7-5.jpg", "LocalStorage", false),
+                // e38194b3... (Galaxy Z Flip 7 product image set)
+                [Guid.Parse("125b89b6-9662-4156-90e0-1b604af95683")] = ("galaxy-zflip7-2.jpg", "product-images/galaxy-zflip7-2.jpg", "LocalStorage", false),
+                [Guid.Parse("7056667a-48aa-468d-b748-269480488e41")] = ("galaxy-zflip7-4.jpg", "product-images/galaxy-zflip7-4.jpg", "LocalStorage", false),
+                [Guid.Parse("72d44712-446e-4d36-9ec7-ce1e8cd9b176")] = ("galaxy-zflip7-3.jpg", "product-images/galaxy-zflip7-3.jpg", "LocalStorage", false),
+                [Guid.Parse("86387ae5-a15c-43e7-b618-5ebf055d2219")] = ("galaxy-zflip7.jpg", "product-images/galaxy-zflip7.jpg", "LocalStorage", true),
+                [Guid.Parse("b0148456-e534-42c6-ab9c-c0802772996d")] = ("galaxy-zflip7-5.jpg", "product-images/galaxy-zflip7-5.jpg", "LocalStorage", false),
 
-                // a0e7e2e1... (iPhone 17 Pro Deep Blue seti)
-                [Guid.Parse("4499b376-111e-41e9-82e9-fc48bedf1892")] = ("iphone-17-pro-deepblue.jpg", "images\\iphone-17-pro-deepblue.jpg", "LocalStorage", true),
-                [Guid.Parse("74ff1581-f5a6-44a6-8999-50aa8a966663")] = ("iphone-17-pro-deepblue-3.jpg", "images\\iphone-17-pro-deepblue-3.jpg", "LocalStorage", false),
-                [Guid.Parse("e6ce807c-878b-4a2c-8040-750b30b28a07")] = ("iphone-17-pro-deepblue-2.jpg", "images\\iphone-17-pro-deepblue-2.jpg", "LocalStorage", false),
+                // a0e7e2e1... (iPhone 17 Pro Deep Blue product image set)
+                [Guid.Parse("4499b376-111e-41e9-82e9-fc48bedf1892")] = ("iphone-17-pro-deepblue.jpg", "product-images/iphone-17-pro-deepblue.jpg", "LocalStorage", true),
+                [Guid.Parse("74ff1581-f5a6-44a6-8999-50aa8a966663")] = ("iphone-17-pro-deepblue-3.jpg", "product-images/iphone-17-pro-deepblue-3.jpg", "LocalStorage", false),
+                [Guid.Parse("e6ce807c-878b-4a2c-8040-750b30b28a07")] = ("iphone-17-pro-deepblue-2.jpg", "product-images/iphone-17-pro-deepblue-2.jpg", "LocalStorage", false),
 
-                // ee871416... (iPhone 16 seti)
-                [Guid.Parse("1b34cbb7-5aa7-48cd-91e5-bfa12b512009")] = ("iphone-16.jpg", "images\\iphone-16.jpg", "LocalStorage", true),
-                [Guid.Parse("7ccba00d-fd06-46f0-be31-ab589ca0c865")] = ("iphone-16-2.jpg", "images\\iphone-16-2.jpg", "LocalStorage", false),
-                [Guid.Parse("b3ebd6d6-1c25-482a-91b9-d74a3d8c21aa")] = ("iphone-16-3.jpg", "images\\iphone-16-3.jpg", "LocalStorage", false),
+                // ee871416... (iPhone 16 product image set)
+                [Guid.Parse("1b34cbb7-5aa7-48cd-91e5-bfa12b512009")] = ("iphone-16.jpg", "product-images/iphone-16.jpg", "LocalStorage", true),
+                [Guid.Parse("7ccba00d-fd06-46f0-be31-ab589ca0c865")] = ("iphone-16-2.jpg", "product-images/iphone-16-2.jpg", "LocalStorage", false),
+                [Guid.Parse("b3ebd6d6-1c25-482a-91b9-d74a3d8c21aa")] = ("iphone-16-3.jpg", "product-images/iphone-16-3.jpg", "LocalStorage", false),
 
-                // de912c56... (Pink Phone seti)
-                [Guid.Parse("6bb3709f-7d84-4d41-afc4-45fe2cde5ff9")] = ("pink-phone-1.jpg", "images\\pink-phone-1.jpg", "LocalStorage", true),
-                [Guid.Parse("3b749096-08c1-441d-8eb4-79b252f7752c")] = ("pink-phone-2.jpg", "images\\pink-phone-2.jpg", "LocalStorage", false),
-                [Guid.Parse("c868a86b-bd79-46c6-9f6f-9f2df3a878cc")] = ("pink-phone-3.jpg", "images\\pink-phone-3.jpg", "LocalStorage", false),
+                // de912c56... (Pink Phone product image set)
+                [Guid.Parse("6bb3709f-7d84-4d41-afc4-45fe2cde5ff9")] = ("pink-phone-1.jpg", "product-images/pink-phone-1.jpg", "LocalStorage", true),
+                [Guid.Parse("3b749096-08c1-441d-8eb4-79b252f7752c")] = ("pink-phone-2.jpg", "product-images/pink-phone-2.jpg", "LocalStorage", false),
+                [Guid.Parse("c868a86b-bd79-46c6-9f6f-9f2df3a878cc")] = ("pink-phone-3.jpg", "product-images/pink-phone-3.jpg", "LocalStorage", false),
                 #endregion
             };
 

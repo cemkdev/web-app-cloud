@@ -3,20 +3,11 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Products.Commands.RemoveRangeProduct
 {
-    public class RemoveRangeProductCommandHandler : IRequestHandler<RemoveRangeProductCommandRequest, RemoveRangeProductCommandResponse>
+    public sealed class RemoveRangeProductCommandHandler(IProductService productService) : IRequestHandler<RemoveRangeProductCommandRequest>
     {
-        readonly IProductService _productService;
-
-        public RemoveRangeProductCommandHandler(IProductService productService)
-        {
-            _productService = productService;
-        }
-
-        public async Task<RemoveRangeProductCommandResponse> Handle(RemoveRangeProductCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _productService.RemoveRangeProductAsync(request.ProductIds);
-
-            return new();
-        }
+        public Task Handle(RemoveRangeProductCommandRequest request, CancellationToken cancellationToken)
+            => productService.RemoveRangeProductAsync(
+                request.ProductIds,
+                cancellationToken);
     }
 }

@@ -2,12 +2,12 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.CreateProduct
 {
-    public class CreateProductCommandRequest : IRequest<CreateProductCommandResponse>
+    public sealed class CreateProductCommandRequest : IRequest<CreateProductCommandResponse>
     {
-        public string Name { get; set; }
-        public int Stock { get; set; }
-        public float Price { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
+        public required string Name { get; init; }
+        public required int Stock { get; init; }
+        public required float Price { get; init; }
+        public required string Title { get; init; }
+        public required string Description { get; init; }
     }
 }

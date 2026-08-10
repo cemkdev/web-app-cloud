@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Products.Queries.GetProductImages
 {
-    public class GetProductImagesQueryRequest : IRequest<List<GetProductImagesQueryResponse>>
+    public sealed class GetProductImagesQueryRequest : IRequest<IReadOnlyList<GetProductImagesQueryResponse>>
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

@@ -1,25 +1,22 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Products.Queries.GetAllProducts.DTOs;
 
 namespace WebAppAPI.Application.Features.Products.Queries.GetAllProducts
 {
-    public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQueryRequest, GetAllProductsQueryResponse>
+    public sealed class GetAllProductsQueryHandler(IProductService productService) : IRequestHandler<GetAllProductsQueryRequest, GetAllProductsQueryResponse>
     {
-        readonly IProductService _productService;
-
-        public GetAllProductsQueryHandler(IProductService productService)
-        {
-            _productService = productService;
-        }
-
         public async Task<GetAllProductsQueryResponse> Handle(GetAllProductsQueryRequest request, CancellationToken cancellationToken)
         {
-            var result = await _productService.GetAllProductsAsync(request.Page, request.Size);
+            GetAllProductsDto result = await productService.GetAllProductsAsync(
+                request.Page,
+                request.Size,
+                cancellationToken);
 
-            return new()
+            return new GetAllProductsQueryResponse
             {
-                Products = result.Products,
-                TotalProductCount = result.TotalProductCount
+                TotalProductCount = result.TotalProductCount,
+                Products = result.Products
             };
         }
     }

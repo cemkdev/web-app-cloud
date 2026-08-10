@@ -2,7 +2,7 @@
 {
     public enum StorageProvider
     {
-        Local = 1,
-        Azure = 2
+        LocalStorage = 1,
+        AzureStorage = 2
     }
 }

@@ -3,20 +3,9 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Products.Commands.UploadProductImage
 {
-    public class UploadProductImageCommandHandler : IRequestHandler<UploadProductImageCommandRequest, UploadProductImageCommandResponse>
+    public sealed class UploadProductImageCommandHandler(IProductService productService) : IRequestHandler<UploadProductImageCommandRequest>
     {
-        readonly IProductService _productService;
-
-        public UploadProductImageCommandHandler(IProductService productService)
-        {
-            _productService = productService;
-        }
-
-        public async Task<UploadProductImageCommandResponse> Handle(UploadProductImageCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _productService.UploadProductImagesAsync(request.Id, request.Files);
-
-            return new();
-        }
+        public Task Handle(UploadProductImageCommandRequest request, CancellationToken cancellationToken)
+            => productService.UploadProductImagesAsync(request.Id, request.Files, cancellationToken);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.ChangeCoverImage
 {
-    public class ChangeCoverImageCommandRequest : IRequest<ChangeCoverImageCommandResponse>
+    public sealed class ChangeCoverImageCommandRequest : IRequest
     {
-        public string ImageId { get; set; }
-        public string ProductId { get; set; }
+        public required string ProductId { get; init; }
+        public required string ImageId { get; init; }
     }
 }

@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.RemoveProductImage
 {
-    public class RemoveProductImageCommandRequest : IRequest<RemoveProductImageCommandResponse>
+    public sealed class RemoveProductImageCommandRequest : IRequest
     {
-        public string Id { get; set; }
-        public string? ImageId { get; set; }
+        public required string ProductId { get; init; }
+        public required string ImageId { get; init; }
     }
 }

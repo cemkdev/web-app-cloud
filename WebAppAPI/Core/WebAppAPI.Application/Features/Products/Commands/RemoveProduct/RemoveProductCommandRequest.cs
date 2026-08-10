@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Products.Commands.RemoveProduct
 {
-    public class RemoveProductCommandRequest : IRequest<RemoveProductCommandResponse>
+    public sealed class RemoveProductCommandRequest : IRequest
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

@@ -1,28 +1,26 @@
 ﻿using MediatR;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Products.DTOs;
 
 namespace WebAppAPI.Application.Features.Products.Queries.GetProductImages
 {
-    public class GetProductImagesQueryHandler : IRequestHandler<GetProductImagesQueryRequest, List<GetProductImagesQueryResponse>>
+    public sealed class GetProductImagesQueryHandler(IProductService productService) : IRequestHandler<GetProductImagesQueryRequest, IReadOnlyList<GetProductImagesQueryResponse>>
     {
-        readonly IProductService _productService;
-
-        public GetProductImagesQueryHandler(IProductService productService)
+        public async Task<IReadOnlyList<GetProductImagesQueryResponse>> Handle(GetProductImagesQueryRequest request, CancellationToken cancellationToken)
         {
-            _productService = productService;
-        }
+            IReadOnlyList<ProductImageDto> images = await productService.GetProductImagesAsync(
+                request.Id,
+                cancellationToken);
 
-        public async Task<List<GetProductImagesQueryResponse>> Handle(GetProductImagesQueryRequest request, CancellationToken cancellationToken)
-        {
-            var images = await _productService.GetProductImagesAsync(request.Id);
-
-            return images.Select(image => new GetProductImagesQueryResponse
-            {
-                Id = image.Id,
-                Path = image.Path,
-                FileName = image.FileName,
-                CoverImage = image.CoverImage
-            }).ToList();
+            return images
+                .Select(image => new GetProductImagesQueryResponse
+                {
+                    Id = image.Id,
+                    Path = image.Path,
+                    FileName = image.FileName,
+                    CoverImage = image.CoverImage
+                })
+                .ToList();
         }
     }
 }

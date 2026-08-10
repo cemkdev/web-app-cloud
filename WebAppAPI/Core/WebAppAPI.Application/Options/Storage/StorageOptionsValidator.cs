@@ -9,7 +9,7 @@ namespace WebAppAPI.Application.Options.Storage
             if (!Enum.IsDefined(options.Provider))
                 return ValidateOptionsResult.Fail($"{StorageOptions.SectionName}:Provider has an invalid value.");
 
-            if (options.Provider == StorageProvider.Azure && string.IsNullOrWhiteSpace(options.Azure.ConnectionString))
+            if (options.Provider == StorageProvider.AzureStorage && string.IsNullOrWhiteSpace(options.Azure.ConnectionString))
                 return ValidateOptionsResult.Fail($"{StorageOptions.SectionName}:Azure:ConnectionString is required when Azure storage provider is selected.");
 
             return ValidateOptionsResult.Success;

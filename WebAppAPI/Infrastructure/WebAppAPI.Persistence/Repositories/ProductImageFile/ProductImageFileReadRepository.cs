@@ -1,23 +1,36 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Persistence.Contexts;
-using E = WebAppAPI.Domain.Entities;
+using Entities = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Persistence.Repositories
 {
     public class ProductImageFileReadRepository(WebAppAPIDbContext context)
-        : ReadRepository<E.ProductImageFile>(context), IProductImageFileReadRepository
+        : ReadRepository<Entities.ProductImageFile>(context), IProductImageFileReadRepository
     {
-        public Task<E.ProductImageFile?> GetCurrentCoverImageAsync(Guid productId, bool tracking = true)
+        public Task<Entities.ProductImageFile?> GetCoverByProductIdAsync(Guid productId, CancellationToken cancellationToken, bool tracking = false)
             => Query(tracking)
-                .Include(p => p.Product)
-                .Where(p => p.CoverImage && p.Product.Any(prod => prod.Id == productId))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(
+                    image =>
+                        image.CoverImage &&
+                        image.Product.Any(product => product.Id == productId),
+                    cancellationToken);
 
-        public Task<E.ProductImageFile?> GetByProductIdAndImageIdAsync(Guid productId, Guid imageId, bool tracking = true)
+        public Task<Entities.ProductImageFile?> GetByIdForProductAsync(Guid productId, Guid imageId, CancellationToken cancellationToken, bool tracking = false)
             => Query(tracking)
-                .Include(p => p.Product)
-                .Where(p => p.Id == imageId && p.Product.Any(prod => prod.Id == productId))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(
+                    image =>
+                        image.Id == imageId &&
+                        image.Product.Any(product => product.Id == productId),
+                    cancellationToken);
+
+        public Task<List<Entities.ProductImageFile>> GetByProductIdAndStorageAsync(Guid productId, string storageName, CancellationToken cancellationToken)
+            => Query(tracking: false)
+                .Where(image =>
+                    image.Storage == storageName &&
+                    image.Product.Any(product => product.Id == productId))
+                .OrderByDescending(image => image.CoverImage)
+                .ThenBy(image => image.Id)
+                .ToListAsync(cancellationToken);
     }
 }

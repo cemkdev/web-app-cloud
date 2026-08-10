@@ -1,8 +1,10 @@
-﻿namespace WebAppAPI.Application.Features.Products.Queries.GetAllProducts
+﻿using WebAppAPI.Application.Features.Products.Queries.GetAllProducts.DTOs;
+
+namespace WebAppAPI.Application.Features.Products.Queries.GetAllProducts
 {
-    public class GetAllProductsQueryResponse
+    public sealed class GetAllProductsQueryResponse
     {
-        public int TotalProductCount { get; set; }
-        public object Products { get; set; }
+        public required int TotalProductCount { get; init; }
+        public required IReadOnlyList<ProductListItemDto> Products { get; init; }
     }
 }
