@@ -1,21 +1,47 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 using WebAppAPI.Persistence.Contexts;
 
 namespace WebAppAPI.Persistence
 {
-    // Created to execute migration commands via the Dotnet CLI.
-    // Normally, IConfiguration could be injected and used in .NET 7. But the project is currently on .NET 6.
-    // This reads the DbContext at design time when EF operations are performed.
-    // For now, avoid using CLI. Perform EF operations via Package Manager Console. It's not needed in production anyway.
     public class DesignTimeDbContext : IDesignTimeDbContextFactory<WebAppAPIDbContext>
     {
         public WebAppAPIDbContext CreateDbContext(string[] args)
         {
-            DbContextOptionsBuilder<WebAppAPIDbContext> dbContextOptionsBuilder = new();
-            dbContextOptionsBuilder.UseNpgsql(Configuration.ConnectionString);
+            string solutionDirectory = FindSolutionDirectory();
+            string apiProjectDirectory = Path.Combine(
+                solutionDirectory,
+                "Presentation",
+                "WebAppAPI.API");
 
-            return new(dbContextOptionsBuilder.Options);
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .SetBasePath(apiProjectDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .Build();
+
+            DbContextOptionsBuilder<WebAppAPIDbContext> optionsBuilder = new();
+
+            optionsBuilder.UseNpgsql(
+                configuration.GetConnectionString("PostgreSQL"));
+
+            return new WebAppAPIDbContext(optionsBuilder.Options);
+        }
+
+        private static string FindSolutionDirectory()
+        {
+            DirectoryInfo? directory = new(Directory.GetCurrentDirectory());
+
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "WebAppAPI.sln")))
+                    return directory.FullName;
+
+                directory = directory.Parent;
+            }
+
+            throw new InvalidOperationException(
+                "WebAppAPI solution directory could not be located.");
         }
     }
 }

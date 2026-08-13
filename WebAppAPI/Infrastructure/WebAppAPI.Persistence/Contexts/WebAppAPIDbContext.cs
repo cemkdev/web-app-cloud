@@ -37,6 +37,14 @@ namespace WebAppAPI.Persistence.Contexts
                 .HasIndex(o => o.OrderCode)
                 .IsUnique();
 
+            builder.Entity<BasketItem>()
+                .HasIndex(basketItem => new
+                {
+                    basketItem.BasketId,
+                    basketItem.ProductId
+                })
+                .IsUnique();
+
             builder.Entity<Basket>()
                 .HasOne(b => b.Order)
                 .WithOne(o => o.Basket)
