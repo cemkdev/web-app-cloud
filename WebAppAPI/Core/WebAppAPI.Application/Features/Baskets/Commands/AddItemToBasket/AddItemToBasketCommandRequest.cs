@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket
 {
-    public class AddItemToBasketCommandRequest : IRequest<AddItemToBasketCommandResponse>
+    public sealed class AddItemToBasketCommandRequest : IRequest
     {
-        public string ProductId { get; set; }
-        public int Quantity { get; set; }
+        public required string ProductId { get; init; }
+        public int Quantity { get; init; }
     }
 }

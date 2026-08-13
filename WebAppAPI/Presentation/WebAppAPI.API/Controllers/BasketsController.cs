@@ -4,59 +4,60 @@ using Microsoft.AspNetCore.Mvc;
 using WebAppAPI.Application.Consts;
 using WebAppAPI.Application.CustomAttributes;
 using WebAppAPI.Application.Enums;
-using WebAppAPI.Domain.Constants;
+using WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket;
 using WebAppAPI.Application.Features.Baskets.Commands.RemoveBasketItem;
 using WebAppAPI.Application.Features.Baskets.Commands.UpdateQuantity;
-using WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket;
 using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
+using WebAppAPI.Domain.Constants;
 
 namespace WebAppAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = AuthSchemes.Authenticated)]
-    public class BasketsController : ControllerBase
+    public class BasketsController(IMediator mediator) : ControllerBase
     {
-        readonly IMediator _mediator;
+        private readonly IMediator _mediator = mediator;
 
-        public BasketsController(IMediator mediator)
+        [HttpPost("add-item-to-basket")]
+        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Baskets, ActionType = ActionType.Write, Definition = "Add Item to Basket")]
+        public async Task<ActionResult> AddItemToBasket(AddItemToBasketCommandRequest request, CancellationToken cancellationToken)
         {
-            _mediator = mediator;
+            await _mediator.Send(request, cancellationToken);
+
+            return NoContent();
         }
 
         [HttpGet("get-all-basket-items")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Baskets, ActionType = ActionType.Read, Definition = "Get All Basket Items")]
-        public async Task<IActionResult> GetAllBasketItems([FromQuery] GetAllBasketItemsQueryRequest getAllBasketItemsQueryRequest)
+        public async Task<ActionResult<IReadOnlyCollection<GetAllBasketItemsQueryResponse>>> GetAllBasketItems(CancellationToken cancellationToken)
         {
-            List<GetAllBasketItemsQueryResponse> response = await _mediator.Send(getAllBasketItemsQueryRequest);
-            return Ok(response);
-        }
+            IReadOnlyCollection<GetAllBasketItemsQueryResponse> response = await _mediator.Send(new GetAllBasketItemsQueryRequest(), cancellationToken);
 
-        [HttpPost("add-item-to-basket")]
-        [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Baskets, ActionType = ActionType.Write, Definition = "Add Item to Basket")]
-        public async Task<IActionResult> AddItemToBasket(AddItemToBasketCommandRequest addItemToBasketCommandRequest)
-        {
-            AddItemToBasketCommandResponse response = await _mediator.Send(addItemToBasketCommandRequest);
             return Ok(response);
         }
 
         [HttpPut("update-basket-item-quantity")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Baskets, ActionType = ActionType.Update, Definition = "Update Basket Item Quantity")]
-        public async Task<IActionResult> UpdateQuantity(UpdateQuantityCommandRequest updateQuantityCommandRequest)
+        public async Task<ActionResult> UpdateQuantity(UpdateQuantityCommandRequest request, CancellationToken cancellationToken)
         {
-            if (updateQuantityCommandRequest.Quantity < 1)
-                throw new BadHttpRequestException("Invalid Request!");
+            await _mediator.Send(request, cancellationToken);
 
-            UpdateQuantityCommandResponse response = await _mediator.Send(updateQuantityCommandRequest);
-            return Ok(response);
+            return NoContent();
         }
 
-        [HttpDelete("remove-basket-item-by-id/{BasketItemId}")]
+        [HttpDelete("remove-basket-item-by-id/{basketItemId}")]
         [AuthorizeDefinition(Menu = AuthorizeDefinitionConstants.Baskets, ActionType = ActionType.Delete, Definition = "Remove Basket Item")]
-        public async Task<IActionResult> RemoveBasketItem([FromRoute] RemoveBasketItemCommandRequest removeBasketItemCommandRequest)
+        public async Task<ActionResult> RemoveBasketItem([FromRoute] string basketItemId, CancellationToken cancellationToken)
         {
-            RemoveBasketItemCommandResponse response = await _mediator.Send(removeBasketItemCommandRequest);
-            return Ok(response);
+            await _mediator.Send(
+                new RemoveBasketItemCommandRequest
+                {
+                    BasketItemId = basketItemId,
+                },
+                cancellationToken);
+
+            return NoContent();
         }
     }
 }

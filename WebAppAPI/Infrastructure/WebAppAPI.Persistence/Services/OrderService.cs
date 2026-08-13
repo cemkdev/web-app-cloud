@@ -37,16 +37,16 @@ namespace WebAppAPI.Persistence.Services
         private readonly IBasketService _basketService = basketService;
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
-        public async Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder)
+        public async Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder, CancellationToken cancellationToken)
         {
-            var basket = await _basketService.GetUserActiveBasketAsync(createIfNotExists: false)
+            var basketId = await _basketService.GetActiveBasketIdAsync(cancellationToken)
                 ?? throw new Exception("Active basket not found.");
 
-            await EnsureBasketHasItemsAsync(basket.Id);
+            await EnsureBasketHasItemsAsync(basketId);
 
             var order = new Order
             {
-                Id = basket.Id,
+                Id = basketId,
                 Address = createOrder.Address,
                 Description = createOrder.Description,
                 OrderCode = GenerateOrderCode(),

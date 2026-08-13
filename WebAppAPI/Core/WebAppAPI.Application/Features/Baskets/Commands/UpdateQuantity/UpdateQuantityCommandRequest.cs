@@ -2,10 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Baskets.Commands.UpdateQuantity
 {
-    public class UpdateQuantityCommandRequest : IRequest<UpdateQuantityCommandResponse>
+    public sealed class UpdateQuantityCommandRequest : IRequest
     {
-        public string BasketItemId { get; set; }
-        public string ProductId { get; set; } // TODO Section 3B / 6.6: ProductId artık UpdateQuantity flow'unda kullanılmayacak. request/DTO contract'larını standardize ederken kaldır.
-        public int Quantity { get; set; }
+        public required string BasketItemId { get; init; }
+        public int Quantity { get; init; }
     }
 }

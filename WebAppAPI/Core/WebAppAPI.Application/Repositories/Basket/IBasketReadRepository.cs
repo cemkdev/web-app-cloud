@@ -1,9 +1,11 @@
-﻿using E = WebAppAPI.Domain.Entities;
+﻿using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
+using Entities = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Application.Repositories
 {
-    public interface IBasketReadRepository : IReadRepository<E.Basket>
+    public interface IBasketReadRepository : IReadRepository<Entities.Basket>
     {
-        Task<E.Basket?> GetWithItemsAndProductImagesAsync(Guid basketId, bool tracking = false);
+        Task<Entities.Basket?> GetActiveBasketByUserIdAsync(string userId, CancellationToken cancellationToken);
+        Task<List<BasketItemListDto>> GetItemsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken);
     }
 }

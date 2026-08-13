@@ -56,7 +56,7 @@
                             <div class="btn-group quantity-area" role="group">
                                 <ng-container *ngIf="basketItem.quantity != 1; else trashBtn">
                                     <button type="button" class="btn custom-message decrease"
-                                        (click)="updateQuantity(basketItem.basketItemId, basketItem.quantity - 1, basketItem.productId)">&ndash;</button>
+                                        (click)="updateQuantity(basketItem.basketItemId, basketItem.quantity - 1)">&ndash;</button>
                                 </ng-container>
                                 <ng-template #trashBtn>
                                     <button type="button" class="btn custom-message decrease trash"
@@ -67,7 +67,7 @@
 
                                 <span class="badge bg-light text-dark mx-2 text-center">{{basketItem.quantity}}</span>
                                 <button type="button" class="btn custom-message increase"
-                                    (click)="updateQuantity(basketItem.basketItemId, basketItem.quantity + 1, basketItem.productId)">+</button>
+                                    (click)="updateQuantity(basketItem.basketItemId, basketItem.quantity + 1)">+</button>
                             </div>
                         </td>
                         <td>

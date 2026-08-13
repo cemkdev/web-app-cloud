@@ -1,4 +1,6 @@
-﻿using WebAppAPI.Application;
+﻿using WebAppAPI.API.Services.CurrentUser;
+using WebAppAPI.Application;
+using WebAppAPI.Application.Abstractions.CurrentUser;
 using WebAppAPI.Application.Abstractions.Storage;
 using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Infrastructure;
@@ -14,6 +16,7 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
         public static IServiceCollection AddWebAppApiDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUserContext, CurrentUserContext>();
             services.AddHttpClient();
 
             services.AddPersistenceServices(configuration);

@@ -37,10 +37,11 @@ namespace WebAppAPI.Infrastructure.Services.Token
                 expires: expiration,
                 notBefore: now,
                 signingCredentials: signingCredentials,
-                claims: new List<Claim>
-                {
-                    new(ClaimTypes.Name, username)
-                });
+                claims:
+                [
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, username)
+                ]);
 
             string accessToken = new JwtSecurityTokenHandler().WriteToken(securityToken);
 

@@ -3,19 +3,9 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Baskets.Commands.RemoveBasketItem
 {
-    public class RemoveBasketItemCommandHandler : IRequestHandler<RemoveBasketItemCommandRequest, RemoveBasketItemCommandResponse>
+    public sealed class RemoveBasketItemCommandHandler(IBasketService basketService) : IRequestHandler<RemoveBasketItemCommandRequest>
     {
-        readonly IBasketService _basketService;
-
-        public RemoveBasketItemCommandHandler(IBasketService basketService)
-        {
-            _basketService = basketService;
-        }
-
-        public async Task<RemoveBasketItemCommandResponse> Handle(RemoveBasketItemCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _basketService.RemoveBasketItemAsync(request.BasketItemId);
-            return new();
-        }
+        public Task Handle(RemoveBasketItemCommandRequest request, CancellationToken cancellationToken)
+            => basketService.RemoveBasketItemAsync(request.BasketItemId, cancellationToken);
     }
 }

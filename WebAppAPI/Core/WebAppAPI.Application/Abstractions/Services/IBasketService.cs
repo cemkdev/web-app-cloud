@@ -1,14 +1,15 @@
-﻿using WebAppAPI.Application.ViewModels.Baskets;
-using WebAppAPI.Domain.Entities;
+﻿using WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket;
+using WebAppAPI.Application.Features.Baskets.Commands.UpdateQuantity;
+using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
 
 namespace WebAppAPI.Application.Abstractions.Services
 {
     public interface IBasketService
     {
-        public Task<List<BasketItem>> GetAllBasketItemsAsync();
-        public Task AddItemToBasketAsync(VM_Create_BasketItem basketItem);
-        public Task UpdateQuantityAsync(VM_Update_BasketItem basketItem);
-        public Task RemoveBasketItemAsync(string basketItemId);
-        public Task<Basket?> GetUserActiveBasketAsync(bool createIfNotExists = false);
+        Task<IReadOnlyList<BasketItemListDto>> GetAllBasketItemsAsync(CancellationToken cancellationToken);
+        Task AddItemToBasketAsync(AddBasketItemDto basketItem, CancellationToken cancellationToken);
+        Task UpdateQuantityAsync(BasketItemQuantityUpdateDto basketItem, CancellationToken cancellationToken);
+        Task RemoveBasketItemAsync(string basketItemId, CancellationToken cancellationToken);
+        Task<Guid?> GetActiveBasketIdAsync(CancellationToken cancellationToken);
     }
 }

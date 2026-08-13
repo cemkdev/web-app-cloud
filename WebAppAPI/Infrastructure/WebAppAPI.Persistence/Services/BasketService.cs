@@ -1,143 +1,196 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Extensions.Options;
+using WebAppAPI.Application.Abstractions.CurrentUser;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket;
+using WebAppAPI.Application.Features.Baskets.Commands.UpdateQuantity;
+using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
+using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
-using WebAppAPI.Application.ViewModels.Baskets;
 using WebAppAPI.Domain.Entities;
-using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class BasketService(
-        IHttpContextAccessor httpContextAccessor,
-        UserManager<AppUser> userManager,
-        IOrderReadRepository orderReadRepository,
+    public sealed class BasketService(
+        ICurrentUserContext currentUserContext,
+        IProductReadRepository productReadRepository,
         IBasketReadRepository basketReadRepository,
+        IWriteRepository<Basket> basketWriteRepository,
         IBasketItemReadRepository basketItemReadRepository,
         IWriteRepository<BasketItem> basketItemWriteRepository,
+        IOptions<BaseStorageOptions> baseStorageOptions,
         IUnitOfWork unitOfWork) : IBasketService
     {
-        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-        private readonly UserManager<AppUser> _userManager = userManager;
-        private readonly IOrderReadRepository _orderReadRepository = orderReadRepository;
+        private readonly ICurrentUserContext _currentUserContext = currentUserContext;
+        private readonly IProductReadRepository _productReadRepository = productReadRepository;
         private readonly IBasketReadRepository _basketReadRepository = basketReadRepository;
+        private readonly IWriteRepository<Basket> _basketWriteRepository = basketWriteRepository;
         private readonly IBasketItemReadRepository _basketItemReadRepository = basketItemReadRepository;
         private readonly IWriteRepository<BasketItem> _basketItemWriteRepository = basketItemWriteRepository;
+        private readonly BaseStorageOptions _baseStorageOptions = baseStorageOptions.Value;
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
-        public async Task AddItemToBasketAsync(VM_Create_BasketItem basketItem)
+        public async Task AddItemToBasketAsync(AddBasketItemDto basketItem, CancellationToken cancellationToken)
         {
-            Basket? basket = await ContextUser(createIfNotExists: true);
-            if (basket != null)
-            {
-                if (string.IsNullOrWhiteSpace(basketItem.ProductId) || !Guid.TryParse(basketItem.ProductId, out Guid productGuid))
-                    throw new Exception("Product id is not valid.");
+            ArgumentNullException.ThrowIfNull(basketItem);
 
-                BasketItem? existingBasketItem = await _basketItemReadRepository.GetByBasketAndProductAsync(basket.Id, productGuid, tracking: true);
-                if (existingBasketItem != null)
-                    existingBasketItem.Quantity++;
-                else
-                    await _basketItemWriteRepository.AddAsync(new()
-                    {
-                        BasketId = basket.Id,
-                        ProductId = productGuid,
-                        Quantity = basketItem.Quantity
-                    });
+            if (string.IsNullOrWhiteSpace(basketItem.ProductId))
+                throw new ArgumentException("Product id is required.", nameof(basketItem));
 
-                await _unitOfWork.SaveChangesAsync();
-            }
+            if (!Guid.TryParse(basketItem.ProductId, out Guid productId))
+                throw new ArgumentException("Product id is not valid.", nameof(basketItem));
+
+            if (basketItem.Quantity < 1)
+                throw new ArgumentOutOfRangeException(nameof(basketItem), "Quantity must be greater than zero.");
+
+            Product? product = await _productReadRepository.GetByIdAsync(productId, cancellationToken);
+
+            if (product is null)
+                throw new KeyNotFoundException("Product not found.");
+
+            Basket basket = await GetOrCreateActiveBasketAsync(cancellationToken);
+
+            BasketItem? existingBasketItem = await _basketItemReadRepository.GetByBasketIdAndProductIdAsync(
+                    basket.Id,
+                    productId,
+                    cancellationToken);
+
+            int newQuantity = (existingBasketItem?.Quantity ?? 0) + basketItem.Quantity;
+
+            if (newQuantity > product.Stock)
+                throw new InvalidOperationException("Quantity exceeds available stock.");
+
+            if (existingBasketItem is not null)
+                existingBasketItem.Quantity = newQuantity;
+            else
+                await _basketItemWriteRepository.AddAsync(new BasketItem
+                {
+                    BasketId = basket.Id,
+                    ProductId = productId,
+                    Quantity = basketItem.Quantity
+                });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task<List<BasketItem>> GetAllBasketItemsAsync()
+        public async Task<IReadOnlyList<BasketItemListDto>> GetAllBasketItemsAsync(CancellationToken cancellationToken)
         {
-            Basket? basket = await ContextUser(createIfNotExists: false);
-            if (basket == null)
-                return new();
+            Basket? basket = await GetActiveBasketAsync(cancellationToken);
 
-            Basket? result = await _basketReadRepository.GetWithItemsAndProductImagesAsync(basket.Id);
+            if (basket is null)
+                return [];
 
-            return result?.BasketItems.OrderBy(bi => bi.DateCreated).ToList() ?? new();
+            List<BasketItemListDto> items = await _basketReadRepository.GetItemsByBasketIdAsync(basket.Id, cancellationToken);
+
+            string baseStorageUrl = _baseStorageOptions.Url.TrimEnd('/');
+
+            return items
+                .Select(item => new BasketItemListDto
+                {
+                    BasketItemId = item.BasketItemId,
+                    ProductId = item.ProductId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    Stock = item.Stock,
+                    Price = item.Price,
+                    Quantity = item.Quantity,
+                    ProductImageFile = item.ProductImageFile is null
+                        ? null
+                        : new BasketItemImageDto
+                        {
+                            ProductImageFileId = item.ProductImageFile.ProductImageFileId,
+                            FileName = item.ProductImageFile.FileName,
+                            Path = $"{baseStorageUrl}/{item.ProductImageFile.Path.TrimStart('/')}"
+                        }
+                })
+                .ToList();
         }
 
-        public async Task<Basket?> GetUserActiveBasketAsync(bool createIfNotExists = false)
+        public async Task UpdateQuantityAsync(BasketItemQuantityUpdateDto basketItem, CancellationToken cancellationToken)
         {
-            return await ContextUser(createIfNotExists);
-        }
+            ArgumentNullException.ThrowIfNull(basketItem);
 
-        public async Task RemoveBasketItemAsync(string basketItemId)
-        {
-            if (!Guid.TryParse(basketItemId, out var basketItemGuid))
-                return;
+            if (string.IsNullOrWhiteSpace(basketItem.BasketItemId))
+                throw new ArgumentException("Basket item id is required.", nameof(basketItem));
 
-            Basket? basket = await ContextUser(createIfNotExists: false);
-            if (basket == null)
-                return;
+            if (!Guid.TryParse(basketItem.BasketItemId, out Guid basketItemId))
+                throw new ArgumentException("Basket item id is not valid.", nameof(basketItem));
 
-            BasketItem? basketItem = await _basketItemReadRepository.GetByIdAndBasketAsync(basketItemGuid, basket.Id, tracking: true);
-            if (basketItem != null)
-            {
-                _basketItemWriteRepository.Remove(basketItem);
-                await _unitOfWork.SaveChangesAsync();
-            }
-        }
+            if (basketItem.Quantity < 1)
+                throw new ArgumentOutOfRangeException(nameof(basketItem), "Quantity must be greater than zero.");
 
-        public async Task UpdateQuantityAsync(VM_Update_BasketItem basketItem)
-        {
-            if (!Guid.TryParse(basketItem.BasketItemId, out var basketItemGuid)) return;
+            Basket? basket = await GetActiveBasketAsync(cancellationToken);
 
-            Basket? basket = await ContextUser(createIfNotExists: false);
+            if (basket is null)
+                throw new KeyNotFoundException("Active basket not found.");
 
-            if (basket == null) return;
+            BasketItem? currentBasketItem = await _basketItemReadRepository.GetForUpdateAsync(basketItemId, basket.Id, cancellationToken);
 
-            BasketItem? currentBasketItem = await _basketItemReadRepository.GetByIdAndBasketAsync(basketItemGuid, basket.Id, tracking: true);
-
-            if (currentBasketItem == null) return;
-
-            if (currentBasketItem.Product == null)
-                throw new Exception("Product not found.");
+            if (currentBasketItem is null)
+                throw new KeyNotFoundException("Basket item not found.");
 
             if (basketItem.Quantity > currentBasketItem.Product.Stock)
-                throw new Exception("Quantity exceeds available stock.");
+                throw new InvalidOperationException("Quantity exceeds available stock.");
 
             currentBasketItem.Quantity = basketItem.Quantity;
-            await _unitOfWork.SaveChangesAsync();
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task RemoveBasketItemAsync(string basketItemId, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(basketItemId))
+                throw new ArgumentException("Basket item id is required.", nameof(basketItemId));
+
+            if (!Guid.TryParse(basketItemId, out Guid basketItemGuid))
+                throw new ArgumentException("Basket item id is not valid.", nameof(basketItemId));
+
+            Basket? basket = await GetActiveBasketAsync(cancellationToken);
+
+            if (basket is null)
+                throw new KeyNotFoundException("Active basket not found.");
+
+            BasketItem? basketItem = await _basketItemReadRepository.GetForDeleteAsync(
+                    basketItemGuid,
+                    basket.Id,
+                    cancellationToken);
+
+            if (basketItem is null)
+                throw new KeyNotFoundException("Basket item not found.");
+
+            _basketItemWriteRepository.Remove(basketItem);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<Guid?> GetActiveBasketIdAsync(CancellationToken cancellationToken)
+        {
+            Basket? basket = await GetActiveBasketAsync(cancellationToken);
+
+            return basket?.Id;
         }
 
         #region Helpers
-        private async Task<Basket?> ContextUser(bool createIfNotExists)
+        private Task<Basket?> GetActiveBasketAsync(CancellationToken cancellationToken)
+            => _basketReadRepository.GetActiveBasketByUserIdAsync(
+                    _currentUserContext.UserId,
+                    cancellationToken);
+
+        private async Task<Basket> GetOrCreateActiveBasketAsync(CancellationToken cancellationToken)
         {
-            var username = _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
+            Basket? basket = await GetActiveBasketAsync(cancellationToken);
 
-            if (!string.IsNullOrEmpty(username))
+            if (basket is not null)
+                return basket;
+
+            basket = new Basket
             {
-                AppUser? user = await _userManager.Users
-                                        .Include(b => b.Baskets)
-                                        .FirstOrDefaultAsync(u => u.UserName == username);
+                UserId = _currentUserContext.UserId
+            };
 
-                Basket? targetBasket = null;
-                if (user?.Baskets != null)
-                {
-                    foreach (Basket basket in user.Baskets)
-                    {
-                        if (!await _orderReadRepository.HasOrderForBasketAsync(basket.Id))
-                        {
-                            targetBasket = basket;
-                            break;
-                        }
-                    }
-                }
+            await _basketWriteRepository.AddAsync(basket);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                if (targetBasket == null && createIfNotExists)
-                {
-                    targetBasket = new();
-                    user!.Baskets.Add(targetBasket);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-
-                return targetBasket;
-            }
-            throw new Exception("An unexpected error occurred.");
+            return basket;
         }
         #endregion
     }

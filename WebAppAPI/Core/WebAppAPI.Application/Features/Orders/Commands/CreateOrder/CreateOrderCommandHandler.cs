@@ -21,7 +21,8 @@ namespace WebAppAPI.Application.Features.Orders.Commands.CreateOrder
             {
                 Description = request.Description,
                 Address = request.Address
-            });
+            },
+            cancellationToken);
 
             await _orderHubService.OrderAddedMessageAsync("You have a new order!");
 

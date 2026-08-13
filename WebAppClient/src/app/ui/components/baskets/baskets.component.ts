@@ -88,16 +88,18 @@ export class BasketsComponent extends BaseComponent implements OnInit {
     });
   }
 
-  async updateQuantity(basketItemId: string, quantity: number, productId: string) {
+  async updateQuantity(basketItemId: string, quantity: number) {
     this.showSpinner(SpinnerType.BallAtom);
+
     const basketItem: Update_Basket_Item = new Update_Basket_Item();
     basketItem.basketItemId = basketItemId;
     basketItem.quantity = quantity;
-    basketItem.productId = productId;
+
     await this.basketService.updateQuantity(basketItem);
     await this.getBasketItems();
     this.manipulateBasketItemsData(this.basketItems);
     this.getTotalPrice();
+    
     this.hideSpinner(SpinnerType.BallAtom);
   }
 

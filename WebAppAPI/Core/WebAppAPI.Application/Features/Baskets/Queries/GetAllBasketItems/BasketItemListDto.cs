@@ -1,9 +1,9 @@
 ﻿namespace WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems
 {
-    public sealed class GetAllBasketItemsQueryResponse
+    public sealed class BasketItemListDto
     {
-        public required string BasketItemId { get; init; }
-        public required string ProductId { get; init; }
+        public Guid BasketItemId { get; init; }
+        public Guid ProductId { get; init; }
         public required string Name { get; init; }
         public required string Description { get; init; }
         public int Stock { get; init; }

@@ -2,7 +2,7 @@
 
 namespace WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems
 {
-    public class GetAllBasketItemsQueryRequest : IRequest<List<GetAllBasketItemsQueryResponse>>
+    public sealed class GetAllBasketItemsQueryRequest : IRequest<IReadOnlyCollection<GetAllBasketItemsQueryResponse>>
     {
     }
 }

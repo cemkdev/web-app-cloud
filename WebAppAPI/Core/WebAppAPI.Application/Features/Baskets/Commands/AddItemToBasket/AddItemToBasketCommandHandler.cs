@@ -3,24 +3,15 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Baskets.Commands.AddItemToBasket
 {
-    public class AddItemToBasketCommandHandler : IRequestHandler<AddItemToBasketCommandRequest, AddItemToBasketCommandResponse>
+    public sealed class AddItemToBasketCommandHandler(IBasketService basketService) : IRequestHandler<AddItemToBasketCommandRequest>
     {
-        readonly IBasketService _basketService;
-
-        public AddItemToBasketCommandHandler(IBasketService basketService)
-        {
-            _basketService = basketService;
-        }
-
-        public async Task<AddItemToBasketCommandResponse> Handle(AddItemToBasketCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _basketService.AddItemToBasketAsync(new()
-            {
-                ProductId = request.ProductId,
-                Quantity = request.Quantity
-            });
-
-            return new();
-        }
+        public Task Handle(AddItemToBasketCommandRequest request, CancellationToken cancellationToken)
+            => basketService.AddItemToBasketAsync(
+                new AddBasketItemDto
+                {
+                    ProductId = request.ProductId,
+                    Quantity = request.Quantity
+                },
+                cancellationToken);
     }
 }

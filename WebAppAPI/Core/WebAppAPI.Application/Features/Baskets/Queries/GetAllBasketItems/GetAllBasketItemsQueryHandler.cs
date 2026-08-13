@@ -1,41 +1,24 @@
 ﻿using MediatR;
-using Microsoft.Extensions.Options;
 using WebAppAPI.Application.Abstractions.Services;
-using WebAppAPI.Application.DTOs;
-using WebAppAPI.Application.Options.Storage;
 
 namespace WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems
 {
-    public class GetAllBasketItemsQueryHandler : IRequestHandler<GetAllBasketItemsQueryRequest, List<GetAllBasketItemsQueryResponse>>
+    public sealed class GetAllBasketItemsQueryHandler(IBasketService basketService) : IRequestHandler<GetAllBasketItemsQueryRequest, IReadOnlyCollection<GetAllBasketItemsQueryResponse>>
     {
-        readonly IBasketService _basketService;
-        readonly BaseStorageOptions _baseStorageOptions;
-
-        public GetAllBasketItemsQueryHandler(IBasketService basketService, IOptions<BaseStorageOptions> baseStorageOptions)
+        public async Task<IReadOnlyCollection<GetAllBasketItemsQueryResponse>> Handle(GetAllBasketItemsQueryRequest request, CancellationToken cancellationToken)
         {
-            _basketService = basketService;
-            _baseStorageOptions = baseStorageOptions.Value;
-        }
+            IReadOnlyList<BasketItemListDto> basketItems = await basketService.GetAllBasketItemsAsync(cancellationToken);
 
-        public async Task<List<GetAllBasketItemsQueryResponse>> Handle(GetAllBasketItemsQueryRequest request, CancellationToken cancellationToken)
-        {
-            var basketItems = await _basketService.GetAllBasketItemsAsync();
-
-            return basketItems.Select(bi => new GetAllBasketItemsQueryResponse()
+            return basketItems.Select(item => new GetAllBasketItemsQueryResponse
             {
-                BasketItemId = bi.Id.ToString(),
-                ProductId = bi.ProductId.ToString(),
-                Name = bi.Product.Name,
-                Description = bi.Product.Description,
-                Price = bi.Product.Price,
-                Stock = bi.Product.Stock,
-                Quantity = bi.Quantity,
-                ProductImageFile = bi.Product.ProductImageFiles?.Where(pif => pif.CoverImage == true).Select(pif => new BasketProductImageFile()
-                {
-                    ProductImageFileId = pif.Id.ToString(),
-                    FileName = pif.FileName,
-                    Path = $"{_baseStorageOptions.Url}/{pif.Path}",
-                }).FirstOrDefault()
+                BasketItemId = item.BasketItemId.ToString(),
+                ProductId = item.ProductId.ToString(),
+                Name = item.Name,
+                Description = item.Description,
+                Stock = item.Stock,
+                Price = item.Price,
+                Quantity = item.Quantity,
+                ProductImageFile = item.ProductImageFile
             }).ToList();
         }
     }

@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Baskets.Commands.RemoveBasketItem
 {
-    public class RemoveBasketItemCommandRequest : IRequest<RemoveBasketItemCommandResponse>
+    public sealed class RemoveBasketItemCommandRequest : IRequest
     {
-        public string BasketItemId { get; set; }
+        public required string BasketItemId { get; init; }
     }
 }
