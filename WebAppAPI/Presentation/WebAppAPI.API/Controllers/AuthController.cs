@@ -70,13 +70,9 @@ namespace WebAppAPI.API.Controllers
         }
 
         [HttpPost("password-reset")]
-        public async Task<ActionResult<PasswordResetCommandResponse>> PasswordReset([FromBody] string email, CancellationToken cancellationToken)
+        public async Task<ActionResult<PasswordResetCommandResponse>> PasswordReset([FromBody] PasswordResetCommandRequest request, CancellationToken cancellationToken)
         {
-            PasswordResetCommandResponse response = await _mediator.Send(new PasswordResetCommandRequest
-            {
-                Email = email
-            },
-            cancellationToken);
+            PasswordResetCommandResponse response = await _mediator.Send(request, cancellationToken);
 
             return Ok(response);
         }

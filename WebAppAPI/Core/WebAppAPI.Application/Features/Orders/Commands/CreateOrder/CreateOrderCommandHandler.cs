@@ -1,32 +1,22 @@
 ﻿using MediatR;
-using WebAppAPI.Application.Abstractions.Hubs;
 using WebAppAPI.Application.Abstractions.Services;
+using WebAppAPI.Application.Features.Orders.Notifications;
 
 namespace WebAppAPI.Application.Features.Orders.Commands.CreateOrder
 {
-    public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommandRequest, CreateOrderCommandResponse>
+    public sealed class CreateOrderCommandHandler(IOrderService orderService, IMediator mediator) : IRequestHandler<CreateOrderCommandRequest>
     {
-        readonly IOrderService _orderService;
-        readonly IOrderHubService _orderHubService;
-
-        public CreateOrderCommandHandler(IOrderService orderService, IOrderHubService orderHubService)
+        public async Task Handle(CreateOrderCommandRequest request, CancellationToken cancellationToken)
         {
-            _orderService = orderService;
-            _orderHubService = orderHubService;
-        }
+            await orderService.CreateOrderAsync(
+                new OrderCreateDto
+                {
+                    Address = request.Address,
+                    Description = request.Description
+                },
+                cancellationToken);
 
-        public async Task<CreateOrderCommandResponse> Handle(CreateOrderCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _orderService.CreateOrderFromActiveBasketAsync(new()
-            {
-                Description = request.Description,
-                Address = request.Address
-            },
-            cancellationToken);
-
-            await _orderHubService.OrderAddedMessageAsync("You have a new order!");
-
-            return new();
+            await mediator.Publish(new OrderCreatedNotification(), cancellationToken);
         }
     }
 }

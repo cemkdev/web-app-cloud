@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Orders.Queries.GetOrderById
 {
-    public class GetOrderByIdQueryRequest : IRequest<GetOrderByIdQueryResponse>
+    public sealed class GetOrderByIdQueryRequest : IRequest<GetOrderByIdQueryResponse>
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

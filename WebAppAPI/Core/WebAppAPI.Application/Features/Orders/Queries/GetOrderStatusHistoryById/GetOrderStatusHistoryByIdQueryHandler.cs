@@ -3,23 +3,14 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById
 {
-    public class GetOrderStatusHistoryByIdQueryHandler : IRequestHandler<GetOrderStatusHistoryByIdQueryRequest, GetOrderStatusHistoryByIdQueryResponse>
+    public sealed class GetOrderStatusHistoryByIdQueryHandler(IOrderService orderService)
+        : IRequestHandler<GetOrderStatusHistoryByIdQueryRequest, GetOrderStatusHistoryByIdQueryResponse>
     {
-        readonly IOrderService _orderService;
-
-        public GetOrderStatusHistoryByIdQueryHandler(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
-
         public async Task<GetOrderStatusHistoryByIdQueryResponse> Handle(GetOrderStatusHistoryByIdQueryRequest request, CancellationToken cancellationToken)
         {
-            var orderStatusHistory = await _orderService.GetOrderStatusHistoryByIdAsync(request.OrderId);
+            OrderStatusHistoryDto orderStatusHistory = await orderService.GetOrderStatusHistoryByIdAsync(request.OrderId, cancellationToken);
 
-            if (orderStatusHistory == null)
-                throw new Exception("Order status history could not be loaded.");
-
-            return new()
+            return new GetOrderStatusHistoryByIdQueryResponse
             {
                 CurrentStatusId = orderStatusHistory.CurrentStatusId,
                 History = orderStatusHistory.History

@@ -7,7 +7,7 @@ namespace WebAppAPI.Application.Features.Auth.Commands.PasswordReset
     {
         public async Task<PasswordResetCommandResponse> Handle(PasswordResetCommandRequest request, CancellationToken cancellationToken)
         {
-            await authService.PasswordResetAsync(request.Email);
+            await authService.PasswordResetAsync(request.Email, cancellationToken);
 
             return new();
         }

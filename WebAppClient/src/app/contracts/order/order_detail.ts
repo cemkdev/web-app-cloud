@@ -19,11 +19,13 @@ export class OrderBasketItem_VM {
 }
 export class OrderBasketItem {
     name: string;
+    title: string;
     description: string;
     price: number;
     quantity: number;
     rating: number;
-    orderProductImageFile: OrderProductImageFile;
+    isProductDeleted: boolean;
+    orderProductImageFile: OrderProductImageFile | null;
 }
 export class OrderProductImageFile {
     productImageFileId: string;

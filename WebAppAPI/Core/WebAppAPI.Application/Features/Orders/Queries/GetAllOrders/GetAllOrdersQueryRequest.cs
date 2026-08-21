@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Orders.Queries.GetAllOrders
 {
-    public class GetAllOrdersQueryRequest : IRequest<GetAllOrdersQueryResponse>
+    public sealed class GetAllOrdersQueryRequest : IRequest<GetAllOrdersQueryResponse>
     {
-        public int Page { get; set; } = 0;
-        public int Size { get; set; } = 5;
+        public int Page { get; init; } = 0;
+        public int Size { get; init; } = 5;
     }
 }

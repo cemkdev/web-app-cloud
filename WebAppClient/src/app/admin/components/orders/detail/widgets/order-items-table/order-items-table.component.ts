@@ -109,7 +109,8 @@ export class OrderItemsTableComponent implements OnInit, OnDestroy {
         itemPrice: `${itemIntegerPart}.${itemFractionPart}`,
         quantity: sourceData.orderBasketItems[i].quantity,
         rating: this.getStars(sourceData.orderBasketItems[i].rating),
-        totalItemAmount: `${totalItemIntegerPart}.${totalItemFractionPart}`
+        totalItemAmount: `${totalItemIntegerPart}.${totalItemFractionPart}`,
+        isProductDeleted: sourceData.orderBasketItems[i].isProductDeleted
       };
       this.orderVM.push(manipulatedData);
       this.dataSource = new MatTableDataSource<OrderBasketItem_VM>(this.orderVM);

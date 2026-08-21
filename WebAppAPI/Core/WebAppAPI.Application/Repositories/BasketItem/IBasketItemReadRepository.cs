@@ -1,4 +1,5 @@
-﻿using Entities = WebAppAPI.Domain.Entities;
+﻿using WebAppAPI.Application.Features.Orders.Commands.CreateOrder;
+using Entities = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Application.Repositories
 {
@@ -7,10 +8,7 @@ namespace WebAppAPI.Application.Repositories
         Task<Entities.BasketItem?> GetByBasketIdAndProductIdAsync(Guid basketId, Guid productId, CancellationToken cancellationToken);
         Task<Entities.BasketItem?> GetForUpdateAsync(Guid basketItemId, Guid basketId, CancellationToken cancellationToken);
         Task<Entities.BasketItem?> GetForDeleteAsync(Guid basketItemId, Guid basketId, CancellationToken cancellationToken);
-
-
-
-        Task<List<Entities.BasketItem>> GetByBasketIdAsync(Guid basketId, bool tracking = false);
-        Task<bool> AnyByBasketIdAsync(Guid basketId);
+        Task<IReadOnlyList<CreateOrderBasketItemData>> GetOrderItemsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken);
+        Task<IReadOnlyList<CreateOrderItemSnapshotData>> GetOrderItemSnapshotsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken);
     }
 }

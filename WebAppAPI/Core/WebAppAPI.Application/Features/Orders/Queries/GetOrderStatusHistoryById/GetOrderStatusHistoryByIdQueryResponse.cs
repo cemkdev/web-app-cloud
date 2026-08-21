@@ -1,10 +1,8 @@
-﻿using WebAppAPI.Application.DTOs.Order;
-
-namespace WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById
+﻿namespace WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById
 {
-    public class GetOrderStatusHistoryByIdQueryResponse
+    public sealed class GetOrderStatusHistoryByIdQueryResponse
     {
-        public int CurrentStatusId { get; set; }
-        public List<StatusChangeEntry> History { get; set; }
+        public required int CurrentStatusId { get; init; }
+        public required IReadOnlyList<OrderStatusHistoryEntryDto> History { get; init; }
     }
 }

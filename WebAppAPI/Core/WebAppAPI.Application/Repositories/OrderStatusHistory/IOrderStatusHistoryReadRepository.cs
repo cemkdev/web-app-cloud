@@ -1,9 +1,10 @@
-﻿using E = WebAppAPI.Domain.Entities;
+﻿using WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById;
+using Entities = WebAppAPI.Domain.Entities;
 
 namespace WebAppAPI.Application.Repositories
 {
-    public interface IOrderStatusHistoryReadRepository : IReadRepository<E.OrderStatusHistory>
+    public interface IOrderStatusHistoryReadRepository : IReadRepository<Entities.OrderStatusHistory>
     {
-        Task<List<E.OrderStatusHistory>> GetByOrderIdAsync(Guid orderId, bool tracking = false);
+        Task<IReadOnlyList<OrderStatusHistoryEntryDto>> GetStatusHistoryByOrderIdAsync(Guid orderId, CancellationToken cancellationToken);
     }
 }

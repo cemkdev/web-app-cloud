@@ -1,8 +1,18 @@
 ﻿using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using WebAppAPI.Application.Abstractions.CurrentUser;
+using WebAppAPI.Application.Abstractions.Messaging;
+using WebAppAPI.Application.Abstractions.Messaging.Messages;
 using WebAppAPI.Application.Abstractions.Services;
-using WebAppAPI.Application.DTOs;
-using WebAppAPI.Application.DTOs.Order;
+using WebAppAPI.Application.Features.Orders.Commands.CreateOrder;
+using WebAppAPI.Application.Features.Orders.Commands.UpdateStatus;
+using WebAppAPI.Application.Features.Orders.Queries.GetAllOrders;
+using WebAppAPI.Application.Features.Orders.Queries.GetMyOrderById;
+using WebAppAPI.Application.Features.Orders.Queries.GetMyOrders;
+using WebAppAPI.Application.Features.Orders.Queries.GetMyOrderStatusHistoryById;
+using WebAppAPI.Application.Features.Orders.Queries.GetOrderById;
+using WebAppAPI.Application.Features.Orders.Queries.GetOrderCustomerById;
+using WebAppAPI.Application.Features.Orders.Queries.GetOrderStatusHistoryById;
 using WebAppAPI.Application.Options.Storage;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities;
@@ -10,301 +20,518 @@ using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Persistence.Services
 {
-    public class OrderService(
-        IWriteRepository<Order> orderWriteRepository,
+    public sealed class OrderService(
+        ICurrentUserContext currentUserContext,
+        IOrderWriteRepository orderWriteRepository,
         IOrderReadRepository orderReadRepository,
         IOrderStatusHistoryReadRepository orderStatusHistoryReadRepository,
         IWriteRepository<OrderStatusHistory> orderStatusHistoryWriteRepository,
+        IOrderItemSnapshotReadRepository orderItemSnapshotReadRepository,
+        IWriteRepository<OrderItemSnapshot> orderItemSnapshotWriteRepository,
         IBasketReadRepository basketReadRepository,
         IWriteRepository<Basket> basketWriteRepository,
         IBasketItemReadRepository basketItemReadRepository,
         IWriteRepository<BasketItem> basketItemWriteRepository,
-        IMailService mailService,
+        IProductWriteRepository productWriteRepository,
+        IProductImageFileReadRepository productImageFileReadRepository,
+        IOutboxWriter outboxWriter,
         IOptions<BaseStorageOptions> baseStorageOptions,
-        IBasketService basketService,
         IUnitOfWork unitOfWork) : IOrderService
     {
-        private readonly IWriteRepository<Order> _orderWriteRepository = orderWriteRepository;
+        private readonly ICurrentUserContext _currentUserContext = currentUserContext;
         private readonly IOrderReadRepository _orderReadRepository = orderReadRepository;
+        private readonly IOrderWriteRepository _orderWriteRepository = orderWriteRepository;
         private readonly IOrderStatusHistoryReadRepository _orderStatusHistoryReadRepository = orderStatusHistoryReadRepository;
         private readonly IWriteRepository<OrderStatusHistory> _orderStatusHistoryWriteRepository = orderStatusHistoryWriteRepository;
+        private readonly IOrderItemSnapshotReadRepository _orderItemSnapshotReadRepository = orderItemSnapshotReadRepository;
+        private readonly IWriteRepository<OrderItemSnapshot> _orderItemSnapshotWriteRepository = orderItemSnapshotWriteRepository;
         private readonly IBasketReadRepository _basketReadRepository = basketReadRepository;
         private readonly IWriteRepository<Basket> _basketWriteRepository = basketWriteRepository;
         private readonly IBasketItemReadRepository _basketItemReadRepository = basketItemReadRepository;
         private readonly IWriteRepository<BasketItem> _basketItemWriteRepository = basketItemWriteRepository;
-        private readonly IMailService _mailService = mailService;
+        private readonly IProductWriteRepository _productWriteRepository = productWriteRepository;
+        private readonly IProductImageFileReadRepository _productImageFileReadRepository = productImageFileReadRepository;
+        private readonly IOutboxWriter _outboxWriter = outboxWriter;
         private readonly BaseStorageOptions _baseStorageOptions = baseStorageOptions.Value;
-        private readonly IBasketService _basketService = basketService;
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
-        public async Task<string> CreateOrderFromActiveBasketAsync(CreateOrder createOrder, CancellationToken cancellationToken)
+        public async Task<GetAllOrdersDto> GetAllOrdersAsync(int page, int size, CancellationToken cancellationToken)
         {
-            var basketId = await _basketService.GetActiveBasketIdAsync(cancellationToken)
-                ?? throw new Exception("Active basket not found.");
+            if (page < 0)
+                throw new ArgumentOutOfRangeException(nameof(page), "Page cannot be negative.");
 
-            await EnsureBasketHasItemsAsync(basketId);
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than zero.");
 
-            var order = new Order
-            {
-                Id = basketId,
-                Address = createOrder.Address,
-                Description = createOrder.Description,
-                OrderCode = GenerateOrderCode(),
-                StatusId = (int)OrderStatusEnum.Pending
-            };
+            GetAllOrdersDto result = await _orderReadRepository.GetPagedAsync(page, size, cancellationToken);
 
-            await _orderWriteRepository.AddAsync(order);
-            await _unitOfWork.SaveChangesAsync();
+            if (result.Orders.Count == 0)
+                return result;
 
-            string orderId = order.Id.ToString();
-            await UpdateOrderStatusAsync(orderId, OrderStatusEnum.Pending);
+            Guid[] orderIds = result.Orders
+                .Select(order => order.Id)
+                .ToArray();
 
-            return orderId;
+            IReadOnlyDictionary<Guid, float> totalPrices =
+                await _orderItemSnapshotReadRepository.GetTotalPricesByOrderIdsAsync(
+                    orderIds,
+                    cancellationToken);
+
+            foreach (OrderListItemDto order in result.Orders)
+                if (totalPrices.TryGetValue(order.Id, out float totalPrice))
+                    order.TotalPrice = totalPrice;
+
+            return result;
         }
 
-        public async Task<ListOrder> GetAllOrdersAsync(int page, int size)
+        public async Task<GetMyOrdersDto> GetMyOrdersAsync(int page, int size, CancellationToken cancellationToken)
         {
-            (List<Order> orders, int totalCount) = await _orderReadRepository.GetPagedWithBasketSummaryAsync(page, size);
+            if (page < 0)
+                throw new ArgumentOutOfRangeException(nameof(page), "Page cannot be negative.");
 
-            return new()
-            {
-                TotalOrderCount = totalCount,
-                Orders = orders.Select(o => new
-                {
-                    Id = o.Id.ToString(),
-                    OrderCode = o.OrderCode,
-                    CustomerName = $"{o.Basket.User.FirstName} {o.Basket.User.LastName}",
-                    TotalPrice = o.Basket.BasketItems.Sum(item => item.Product.Price * item.Quantity),
-                    DateCreated = o.DateCreated,
-                    StatusId = o.StatusId
-                }).ToList()
-            };
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than zero.");
+
+            GetMyOrdersDto result = await _orderReadRepository.GetPagedByUserIdAsync(
+                _currentUserContext.UserId,
+                page,
+                size,
+                cancellationToken);
+
+            if (result.Orders.Count == 0)
+                return result;
+
+            Guid[] orderIds = result.Orders
+                .Select(order => order.Id)
+                .ToArray();
+
+            IReadOnlyDictionary<Guid, float> totalPrices =
+                await _orderItemSnapshotReadRepository.GetTotalPricesByOrderIdsAsync(
+                    orderIds,
+                    cancellationToken);
+
+            foreach (MyOrderListItemDto order in result.Orders)
+                if (totalPrices.TryGetValue(order.Id, out float totalPrice))
+                    order.TotalPrice = totalPrice;
+
+            return result;
         }
 
-        public async Task<OrderDetail> GetOrderByIdAsync(string id)
+        public async Task<GetOrderByIdDto> GetOrderByIdAsync(string id, CancellationToken cancellationToken)
         {
-            if (!Guid.TryParse(id, out var orderGuid))
-                throw new Exception("Invalid order id.");
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Order id is required.", nameof(id));
 
-            Order? order = await _orderReadRepository.GetDetailByIdAsync(orderGuid);
+            if (!Guid.TryParse(id, out Guid orderGuid))
+                throw new ArgumentException("Order id is invalid.", nameof(id));
 
-            if (order == null)
-                throw new Exception("An Order with the specified ID could not be found.");
+            GetOrderByIdDto? order = await _orderReadRepository.GetDetailByIdAsync(orderGuid, cancellationToken);
 
-            var orderDetail = new OrderDetail()
-            {
-                Id = order.Id.ToString(),
-                OrderCode = order.OrderCode,
-                Description = order.Description,
-                Address = order.Address,
-                DateCreated = order.DateCreated,
-                StatusId = order.StatusId,
-                OrderBasketItems = order.Basket.BasketItems.Select(bi => new OrderItems()
-                {
-                    Name = bi.Product.Name,
-                    Description = bi.Product.Description,
-                    Price = bi.Product.Price,
-                    Quantity = bi.Quantity,
-                    Rating = bi.Product.Rating,
-                    OrderProductImageFile = bi.Product.ProductImageFiles.Where(pif => pif.CoverImage == true).Select(pif => new BasketProductImageFile
+            if (order is null)
+                throw new KeyNotFoundException($"Order with id '{id}' was not found.");
+
+            IReadOnlyDictionary<Guid, OrderDetailItemDto> snapshotItems =
+                await _orderItemSnapshotReadRepository.GetDetailItemsByOrderIdAsync(orderGuid, cancellationToken);
+
+            Guid[] productIds = snapshotItems
+                .Where(item => !item.Value.IsProductDeleted)
+                .Select(item => item.Key)
+                .ToArray();
+
+            IReadOnlyDictionary<Guid, ProductImageFile> coverImages =
+                await _productImageFileReadRepository.GetCoversByProductIdsAsync(productIds, cancellationToken);
+
+            foreach ((Guid productId, OrderDetailItemDto item) in snapshotItems)
+                if (!item.IsProductDeleted && coverImages.TryGetValue(productId, out ProductImageFile? image))
+                    item.OrderProductImageFile = new OrderProductImageDto
                     {
-                        ProductImageFileId = pif.Id.ToString(),
-                        FileName = pif.FileName,
-                        Path = $"{_baseStorageOptions.Url}/{pif.Path}"
-                    }).FirstOrDefault()
-                }).ToList()
-            };
+                        ProductImageFileId = image.Id,
+                        FileName = image.FileName,
+                        Path = $"{_baseStorageOptions.Url}/{image.Path}"
+                    };
 
-            return orderDetail;
+            order.OrderBasketItems = snapshotItems.Values.ToList();
+
+            return order;
         }
 
-        public async Task UpdateOrderStatusAsync(string orderId, OrderStatusEnum newStatus)
+        public async Task<GetOrderCustomerByIdDto> GetOrderCustomerByIdAsync(string orderId, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(orderId))
+                throw new ArgumentException("Order id is required.", nameof(orderId));
+
             if (!Guid.TryParse(orderId, out Guid orderGuid))
-                throw new Exception("Invalid order id.");
+                throw new ArgumentException("Order id is invalid.", nameof(orderId));
 
-            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, CancellationToken.None, tracking: true);
-            if (order == null)
-                throw new Exception("An Order with the specified ID could not be found.");
+            GetOrderCustomerByIdDto? customer = await _orderReadRepository.GetCustomerByOrderIdAsync(orderGuid, cancellationToken);
 
-            try
-            {
-                var currentStatus = (OrderStatusEnum)order.StatusId;
+            if (customer is null)
+                throw new KeyNotFoundException($"Order with id '{orderId}' was not found.");
 
-                if (!IsValidStatusTransition(currentStatus, newStatus))
-                    throw new InvalidOperationException($"Order status can't transition from {currentStatus} to {newStatus}");
-
-                // Save the status history before applying the order status update.
-                var orderStatusHistory = new OrderStatusHistory
-                {
-                    Id = Guid.NewGuid(),
-                    OrderId = order.Id,
-                    PreviousStatusId = (int)currentStatus,
-                    NewStatusId = (int)newStatus,
-                    ChangedDate = DateTime.UtcNow
-                };
-                await _orderStatusHistoryWriteRepository.AddAsync(orderStatusHistory);
-                var historySaveResult = await _unitOfWork.SaveChangesAsync();
-
-                // Continue only if the history record was persisted successfully.
-                if (historySaveResult > 0)
-                {
-                    if (newStatus != currentStatus)
-                    {
-                        order.StatusId = (int)newStatus;
-                        _orderWriteRepository.Update(order);
-                        await _unitOfWork.SaveChangesAsync();
-                    }
-
-                    UpdateOrderStatusMailDto mailData = await CreateOrderStatusMailObject(order.Id, newStatus, orderStatusHistory.ChangedDate);
-                    await _mailService.SendOrderStatusUpdateMailAsync(mailData.Recipient, mailData.OrderCode, mailData.NewStatus, mailData.StatusChangedDate, mailData.FirstName);
-                }
-                else
-                {
-                    throw new Exception("Order status history could not be saved.");
-                }
-            }
-            catch (Exception)
-            {
-                throw;
-            }
+            return customer;
         }
 
-        public async Task<OrderStatusHistoryDto> GetOrderStatusHistoryByIdAsync(string orderId)
+        public async Task<GetMyOrderByIdDto> GetMyOrderByIdAsync(string id, CancellationToken cancellationToken)
         {
-            if (!Guid.TryParse(orderId, out var orderGuid))
-                throw new Exception("Invalid order id.");
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Order id is required.", nameof(id));
 
-            Order? order = await _orderReadRepository.GetByIdAsync(orderGuid, CancellationToken.None, tracking: false);
-            if (order == null)
-                throw new Exception("An Order with the specified ID could not be found.");
+            if (!Guid.TryParse(id, out Guid orderGuid))
+                throw new ArgumentException("Order id is invalid.", nameof(id));
 
-            List<OrderStatusHistory> statusHistoryList = await _orderStatusHistoryReadRepository.GetByOrderIdAsync(orderGuid);
+            GetMyOrderByIdDto? order = await _orderReadRepository.GetDetailByIdAndUserIdAsync(orderGuid, _currentUserContext.UserId, cancellationToken);
+
+            if (order is null)
+                throw new KeyNotFoundException($"Order with id '{id}' was not found.");
+
+            IReadOnlyDictionary<Guid, MyOrderDetailItemDto> snapshotItems =
+                await _orderItemSnapshotReadRepository.GetMyDetailItemsByOrderIdAsync(orderGuid, cancellationToken);
+
+            Guid[] productIds = snapshotItems
+                .Where(item => !item.Value.IsProductDeleted)
+                .Select(item => item.Key)
+                .ToArray();
+
+            IReadOnlyDictionary<Guid, ProductImageFile> coverImages =
+                await _productImageFileReadRepository.GetCoversByProductIdsAsync(
+                    productIds,
+                    cancellationToken);
+
+            foreach ((Guid productId, MyOrderDetailItemDto item) in snapshotItems)
+                if (!item.IsProductDeleted && coverImages.TryGetValue(productId, out ProductImageFile? image))
+                    item.OrderProductImageFile = new MyOrderProductImageDto
+                    {
+                        ProductImageFileId = image.Id,
+                        FileName = image.FileName,
+                        Path = $"{_baseStorageOptions.Url}/{image.Path}"
+                    };
+
+            order.OrderBasketItems = snapshotItems.Values.ToList();
+
+            return order;
+        }
+
+        public async Task<OrderStatusHistoryDto> GetOrderStatusHistoryByIdAsync(string orderId, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(orderId))
+                throw new ArgumentException("Order id is required.", nameof(orderId));
+
+            if (!Guid.TryParse(orderId, out Guid orderGuid))
+                throw new ArgumentException("Order id is invalid.", nameof(orderId));
+
+            int? currentStatusId = await _orderReadRepository.GetStatusIdByIdAsync(orderGuid, cancellationToken);
+
+            if (currentStatusId is null)
+                throw new KeyNotFoundException($"Order with id '{orderId}' was not found.");
+
+            IReadOnlyList<OrderStatusHistoryEntryDto> history =
+                await _orderStatusHistoryReadRepository.GetStatusHistoryByOrderIdAsync(orderGuid, cancellationToken);
 
             return new OrderStatusHistoryDto
             {
-                CurrentStatusId = order.StatusId,
-                History = statusHistoryList.Select(sh => new StatusChangeEntry
-                {
-                    NewStatusId = sh.NewStatusId,
-                    ChangedDate = sh.ChangedDate
-                }).ToList()
+                CurrentStatusId = currentStatusId.Value,
+                History = history
             };
         }
 
-        public async Task DeleteOrderAsync(string id)
+        public async Task<MyOrderStatusHistoryDto> GetMyOrderStatusHistoryByIdAsync(string orderId, CancellationToken cancellationToken)
         {
-            if (!Guid.TryParse(id, out var orderId))
-                throw new Exception("Invalid order id.");
+            if (string.IsNullOrWhiteSpace(orderId))
+                throw new ArgumentException("Order id is required.", nameof(orderId));
 
-            await DeleteOrderAggregateAsync(orderId);
-            await _unitOfWork.SaveChangesAsync();
+            if (!Guid.TryParse(orderId, out Guid orderGuid))
+                throw new ArgumentException("Order id is invalid.", nameof(orderId));
+
+            int? currentStatusId = await _orderReadRepository.GetStatusIdByIdAndUserIdAsync(orderGuid, _currentUserContext.UserId, cancellationToken);
+
+            if (currentStatusId is null)
+                throw new KeyNotFoundException($"Order with id '{orderId}' was not found.");
+
+            IReadOnlyList<OrderStatusHistoryEntryDto> history = await _orderStatusHistoryReadRepository.GetStatusHistoryByOrderIdAsync(orderGuid, cancellationToken);
+
+            return new MyOrderStatusHistoryDto
+            {
+                CurrentStatusId = currentStatusId.Value,
+                History = history
+                    .Select(entry => new MyOrderStatusHistoryEntryDto
+                    {
+                        NewStatusId = entry.NewStatusId,
+                        ChangedDate = entry.ChangedDate
+                    })
+                    .ToList()
+            };
         }
 
-        public async Task DeleteRangeOrderAsync(IEnumerable<string> ids)
+        public async Task CreateOrderAsync(OrderCreateDto createOrder, CancellationToken cancellationToken)
         {
-            foreach (var id in ids)
-            {
-                if (!Guid.TryParse(id, out var orderId))
-                    throw new Exception("Invalid order id.");
+            ArgumentNullException.ThrowIfNull(createOrder);
 
-                await DeleteOrderAggregateAsync(orderId);
+            if (string.IsNullOrWhiteSpace(createOrder.Address))
+                throw new ArgumentException("Order address is required.", nameof(createOrder));
+
+            if (string.IsNullOrWhiteSpace(createOrder.Description))
+                throw new ArgumentException("Order description is required.", nameof(createOrder));
+
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async transactionCancellationToken =>
+                {
+                    ActiveBasketOrderData? activeBasket = await _basketReadRepository
+                        .GetActiveBasketOrderDataAsync(_currentUserContext.UserId, transactionCancellationToken);
+
+                    if (activeBasket is null)
+                        throw new InvalidOperationException("Active basket was not found.");
+
+                    if (string.IsNullOrWhiteSpace(activeBasket.Recipient))
+                        throw new InvalidOperationException("The order customer does not have a valid email address.");
+
+                    IReadOnlyList<CreateOrderBasketItemData> basketItems = await _basketItemReadRepository.GetOrderItemsByBasketIdAsync(activeBasket.BasketId, transactionCancellationToken);
+
+                    if (basketItems.Count == 0)
+                        throw new InvalidOperationException("Cannot create an order from an empty basket.");
+
+                    Order order = new()
+                    {
+                        Id = activeBasket.BasketId,
+                        Address = createOrder.Address,
+                        Description = createOrder.Description,
+                        OrderCode = GenerateOrderCode(),
+                        StatusId = (int)OrderStatusEnum.Pending
+                    };
+
+                    await _orderWriteRepository.AddAsync(order);
+
+                    // Create immutable order item snapshots for historical order data.
+                    IReadOnlyList<CreateOrderItemSnapshotData> snapshotItems =
+                        await _basketItemReadRepository.GetOrderItemSnapshotsByBasketIdAsync(activeBasket.BasketId, transactionCancellationToken);
+
+                    List<OrderItemSnapshot> orderItemSnapshots = snapshotItems
+                        .Select(item => new OrderItemSnapshot
+                        {
+                            Id = Guid.NewGuid(),
+                            OrderId = order.Id,
+                            ProductId = item.ProductId,
+                            Name = item.Name,
+                            Title = item.Title,
+                            Description = item.Description,
+                            Rating = item.Rating,
+                            UnitPrice = item.UnitPrice,
+                            Quantity = item.Quantity,
+                            IsProductDeleted = false
+                        })
+                        .ToList();
+
+                    await _orderItemSnapshotWriteRepository.AddRangeAsync(orderItemSnapshots);
+
+                    // Persist the Order and its item snapshots inside the explicit transaction before reserving stock.
+                    // The outer transaction still owns the commit.
+                    await _unitOfWork.SaveChangesAsync(transactionCancellationToken);
+
+                    foreach (CreateOrderBasketItemData basketItem in basketItems)
+                    {
+                        bool stockDecreased = await _productWriteRepository.TryDecreaseStockAsync(
+                                basketItem.ProductId,
+                                basketItem.Quantity,
+                                transactionCancellationToken);
+
+                        if (!stockDecreased)
+                            throw new InvalidOperationException($"Product '{basketItem.ProductId}' is unavailable or does not have sufficient stock.");
+                    }
+
+                    await ApplyOrderStatusAsync(
+                        order.Id,
+                        order.OrderCode,
+                        OrderStatusEnum.Pending,
+                        OrderStatusEnum.Pending,
+                        activeBasket.Recipient,
+                        activeBasket.FirstName,
+                        transactionCancellationToken);
+                },
+                cancellationToken);
+        }
+
+        public async Task UpdateOrderStatusAsync(string orderId, OrderStatusEnum newStatus, CancellationToken cancellationToken)
+        {
+            if (!Guid.TryParse(orderId, out Guid orderGuid))
+                throw new ArgumentException("Order id is invalid.", nameof(orderId));
+
+            if (!Enum.IsDefined(newStatus))
+                throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, "Order status is invalid.");
+
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async transactionCancellationToken =>
+                {
+                    OrderStatusUpdateData? orderStatusUpdateData = await _orderReadRepository
+                        .GetOrderStatusUpdateDetailsAsync(orderGuid, transactionCancellationToken);
+
+                    if (orderStatusUpdateData is null)
+                        throw new KeyNotFoundException($"Order with id '{orderId}' was not found.");
+
+                    if (string.IsNullOrWhiteSpace(orderStatusUpdateData.Recipient))
+                        throw new InvalidOperationException("The order customer does not have a valid email address.");
+
+                    OrderStatusEnum currentStatus = (OrderStatusEnum)orderStatusUpdateData.StatusId;
+
+                    if (newStatus == currentStatus)
+                        throw new InvalidOperationException($"Order is already in {currentStatus} status.");
+
+                    bool statusUpdated = await _orderWriteRepository.TryUpdateStatusAsync(
+                        orderStatusUpdateData.OrderId,
+                        currentStatus,
+                        newStatus,
+                        transactionCancellationToken);
+
+                    if (!statusUpdated)
+                        throw new InvalidOperationException("Order status was changed by another operation. Refresh and try again.");
+
+                    await ApplyOrderStatusAsync(
+                        orderStatusUpdateData.OrderId,
+                        orderStatusUpdateData.OrderCode,
+                        currentStatus,
+                        newStatus,
+                        orderStatusUpdateData.Recipient,
+                        orderStatusUpdateData.FirstName,
+                        transactionCancellationToken);
+                },
+                cancellationToken);
+        }
+
+        public async Task DeleteOrderAsync(string id, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Order id is required.", nameof(id));
+
+            if (!Guid.TryParse(id, out Guid orderId))
+                throw new ArgumentException("Order id is invalid.", nameof(id));
+
+            await DeleteOrderAggregateAsync([orderId], cancellationToken);
+        }
+
+        public async Task DeleteRangeOrderAsync(IEnumerable<string> ids, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(ids);
+
+            List<string> orderIds = ids.ToList();
+
+            if (orderIds.Count == 0)
+                throw new ArgumentException("At least one order id is required.", nameof(ids));
+
+            List<Guid> parsedOrderIds = new(orderIds.Count);
+
+            foreach (string id in orderIds)
+            {
+                if (string.IsNullOrWhiteSpace(id) || !Guid.TryParse(id, out Guid orderId))
+                    throw new ArgumentException($"Order id '{id}' is invalid.", nameof(ids));
+
+                parsedOrderIds.Add(orderId);
             }
-            await _unitOfWork.SaveChangesAsync();
+
+            Guid[] distinctOrderIds = parsedOrderIds.Distinct().ToArray();
+
+            await DeleteOrderAggregateAsync(distinctOrderIds, cancellationToken);
         }
 
         #region Helpers - Methods
-        private async Task EnsureBasketHasItemsAsync(Guid basketId)
+        private async Task ApplyOrderStatusAsync(Guid orderId, string orderCode, OrderStatusEnum currentStatus, OrderStatusEnum newStatus, string recipient, string firstName, CancellationToken cancellationToken)
         {
-            bool hasBasketItems = await _basketItemReadRepository.AnyByBasketIdAsync(basketId);
+            if (!Enum.IsDefined(currentStatus))
+                throw new InvalidOperationException($"Order '{orderId}' has an invalid current status.");
 
-            if (!hasBasketItems)
-                throw new Exception("Cannot create an order from an empty basket.");
-        }
+            if (!IsValidStatusTransition(currentStatus, newStatus))
+                throw new InvalidOperationException($"Order status cannot transition from {currentStatus} to {newStatus}.");
 
-        private async Task DeleteOrderAggregateAsync(Guid orderId)
-        {
-            Order? order = await _orderReadRepository.GetByIdAsync(orderId, CancellationToken.None, tracking: true);
-            if (order == null)
-                throw new Exception("An Order with the specified ID could not be found.");
+            DateTime changedDate = DateTime.UtcNow;
 
-            Basket? basket = await _basketReadRepository.GetByIdAsync(orderId, CancellationToken.None, tracking: true);
-            if (basket == null)
-                throw new Exception("A Basket with the specified ID could not be found.");
-
-            List<OrderStatusHistory> statusHistories = await _orderStatusHistoryReadRepository.GetByOrderIdAsync(orderId, tracking: true);
-
-            if (statusHistories.Count > 0)
-                _orderStatusHistoryWriteRepository.RemoveRange(statusHistories);
-
-            List<BasketItem> basketItems = await _basketItemReadRepository.GetByBasketIdAsync(orderId, tracking: true);
-            if (basketItems.Count > 0)
-                _basketItemWriteRepository.RemoveRange(basketItems);
-
-            _orderWriteRepository.Remove(order);
-            _basketWriteRepository.Remove(basket);
-        }
-
-        private string GenerateOrderCode()
-        {
-            Span<byte> buffer = stackalloc byte[8];
-            RandomNumberGenerator.Fill(buffer);
-            long randomNumber = BitConverter.ToInt64(buffer);
-
-            long positive10Digit = Math.Abs(randomNumber % 9_000_000_000L) + 1_000_000_000L;
-            string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-
-            return string.Create(
-                4 + 10 + 1 + 12, // "ORD_" + 10 digits + "_" + timestamp (yyyyMMddHHmm)
-                (positive10Digit, timestamp),
-                static (span, state) =>
-                {
-                    var (number, ts) = state;
-
-                    // "ORD_"
-                    "ORD_".AsSpan().CopyTo(span.Slice(0, 4));
-
-                    // 10 digits number
-                    number.TryFormat(span.Slice(4, 10), out _);
-
-                    // "_"
-                    span[14] = '_';
-
-                    // timestamp
-                    ts.AsSpan().CopyTo(span.Slice(15));
-                }
-            );
-        }
-
-        private bool IsValidStatusTransition(OrderStatusEnum current, OrderStatusEnum next)
-        {
-            var validTransitions = new Dictionary<OrderStatusEnum, List<OrderStatusEnum>>
+            OrderStatusHistory orderStatusHistory = new()
             {
-                { OrderStatusEnum.Pending, new() { OrderStatusEnum.Pending, OrderStatusEnum.Approved, OrderStatusEnum.Cancelled } },
-                { OrderStatusEnum.Approved, new() { OrderStatusEnum.Shipping } },
-                { OrderStatusEnum.Shipping, new() { OrderStatusEnum.Delivered } },
-                { OrderStatusEnum.Delivered, new() },
-                { OrderStatusEnum.Cancelled, new() }
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                PreviousStatusId = (int)currentStatus,
+                NewStatusId = (int)newStatus,
+                ChangedDate = changedDate
             };
-            return validTransitions.TryGetValue(current, out var nextStates) && nextStates.Contains(next);
-        }
 
-        private async Task<UpdateOrderStatusMailDto> CreateOrderStatusMailObject(Guid orderId, OrderStatusEnum newStatus, DateTime changedDate)
-        {
-            Order? orderData = await _orderReadRepository.GetWithBasketUserAsync(orderId);
+            await _orderStatusHistoryWriteRepository.AddAsync(orderStatusHistory);
 
-            if (orderData?.Basket?.User == null)
-                throw new Exception("Order's Basket or User data could not be loaded.");
-
-            UpdateOrderStatusMailDto mailData = new()
+            OrderStatusUpdateMailMessage mailMessage = new()
             {
-                Recipient = orderData.Basket.User.Email,
-                FirstName = orderData.Basket.User.FirstName,
-                OrderCode = orderData.OrderCode,
+                Recipient = recipient,
+                FirstName = firstName,
+                OrderCode = orderCode,
                 NewStatus = newStatus,
                 StatusChangedDate = changedDate
             };
-            return mailData;
+
+            // Queue the order status email for background processing.
+            await _outboxWriter.EnqueueAsync(
+                OutboxMessageTypes.OrderStatusUpdateMail,
+                mailMessage,
+                $"{OutboxMessageTypes.OrderStatusUpdateMail}:{orderStatusHistory.Id}",
+                expiresAt: null,
+                cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        private static bool IsValidStatusTransition(OrderStatusEnum current, OrderStatusEnum next)
+            => current switch
+            {
+                OrderStatusEnum.Pending =>
+                    next is OrderStatusEnum.Pending
+                        or OrderStatusEnum.Approved
+                        or OrderStatusEnum.Cancelled,
+
+                OrderStatusEnum.Approved =>
+                    next == OrderStatusEnum.Shipping,
+
+                OrderStatusEnum.Shipping =>
+                    next == OrderStatusEnum.Delivered,
+
+                OrderStatusEnum.Delivered => false,
+                OrderStatusEnum.Cancelled => false,
+
+                _ => false
+            };
+
+        private static string GenerateOrderCode()
+        {
+            Span<byte> buffer = stackalloc byte[8];
+            RandomNumberGenerator.Fill(buffer);
+
+            long randomNumber = BitConverter.ToInt64(buffer);
+            long positive10Digit =
+                Math.Abs(randomNumber % 9_000_000_000L) + 1_000_000_000L;
+
+            return $"ORD_{positive10Digit}_{DateTime.UtcNow:yyyyMMddHHmm}";
+        }
+
+        private async Task DeleteOrderAggregateAsync(IReadOnlyCollection<Guid> orderIds, CancellationToken cancellationToken)
+        {
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async transactionCancellationToken =>
+                {
+                    await _orderStatusHistoryWriteRepository.ExecuteDeleteAsync(
+                        history => orderIds.Contains(history.OrderId),
+                        transactionCancellationToken);
+
+                    await _basketItemWriteRepository.ExecuteDeleteAsync(
+                        basketItem => orderIds.Contains(basketItem.BasketId),
+                        transactionCancellationToken);
+
+                    int deletedOrderCount = await _orderWriteRepository.ExecuteDeleteAsync(
+                        order => orderIds.Contains(order.Id),
+                        transactionCancellationToken);
+
+                    if (deletedOrderCount != orderIds.Count)
+                        throw new KeyNotFoundException("One or more orders were not found.");
+
+                    int deletedBasketCount = await _basketWriteRepository.ExecuteDeleteAsync(
+                        basket => orderIds.Contains(basket.Id),
+                        transactionCancellationToken);
+
+                    if (deletedBasketCount != orderIds.Count)
+                        throw new InvalidOperationException("One or more order baskets could not be deleted.");
+                },
+                cancellationToken);
         }
         #endregion
     }

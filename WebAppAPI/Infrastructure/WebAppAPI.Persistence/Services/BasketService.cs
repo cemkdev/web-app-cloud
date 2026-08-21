@@ -162,13 +162,6 @@ namespace WebAppAPI.Persistence.Services
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task<Guid?> GetActiveBasketIdAsync(CancellationToken cancellationToken)
-        {
-            Basket? basket = await GetActiveBasketAsync(cancellationToken);
-
-            return basket?.Id;
-        }
-
         #region Helpers
         private Task<Basket?> GetActiveBasketAsync(CancellationToken cancellationToken)
             => _basketReadRepository.GetActiveBasketByUserIdAsync(

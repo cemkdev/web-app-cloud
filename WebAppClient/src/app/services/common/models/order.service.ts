@@ -6,6 +6,7 @@ import { List_Order } from '../../../contracts/order/list_order';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Order_Detail } from '../../../contracts/order/order_detail';
 import { OrderStatusHistory } from '../../../contracts/order/order_status_history';
+import { OrderCustomer } from '../../../contracts/order/order_customer';
 
 @Injectable({
   providedIn: 'root'
@@ -57,6 +58,15 @@ export class OrderService {
       )
     );
     return data;
+  }
+
+  async getOrderCustomerById(id: string): Promise<OrderCustomer> {
+    return await firstValueFrom(
+      this.httpClientService.get<OrderCustomer>({
+        controller: "orders",
+        action: "get-order-customer-by-id"
+      }, id)
+    );
   }
 
   // POST / CREATE

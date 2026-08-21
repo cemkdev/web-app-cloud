@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Orders.Commands.RemoveRangeOrder
 {
-    public class RemoveRangeOrderCommandRequest : IRequest<RemoveRangeOrderCommandResponse>
+    public sealed class RemoveRangeOrderCommandRequest : IRequest
     {
-        public List<string> OrderIds { get; set; }
+        public required IReadOnlyCollection<string> OrderIds { get; init; }
     }
 }

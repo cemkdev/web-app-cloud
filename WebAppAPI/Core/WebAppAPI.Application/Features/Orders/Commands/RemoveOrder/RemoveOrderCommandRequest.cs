@@ -2,8 +2,8 @@
 
 namespace WebAppAPI.Application.Features.Orders.Commands.RemoveOrder
 {
-    public class RemoveOrderCommandRequest : IRequest<RemoveOrderCommandResponse>
+    public sealed class RemoveOrderCommandRequest : IRequest
     {
-        public string Id { get; set; }
+        public required string Id { get; init; }
     }
 }

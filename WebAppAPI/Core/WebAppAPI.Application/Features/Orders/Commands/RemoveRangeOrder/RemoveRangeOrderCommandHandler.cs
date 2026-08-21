@@ -3,20 +3,11 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Orders.Commands.RemoveRangeOrder
 {
-    public class RemoveRangeOrderCommandHandler : IRequestHandler<RemoveRangeOrderCommandRequest, RemoveRangeOrderCommandResponse>
+    public sealed class RemoveRangeOrderCommandHandler(IOrderService orderService) : IRequestHandler<RemoveRangeOrderCommandRequest>
     {
-        readonly IOrderService _orderService;
-
-        public RemoveRangeOrderCommandHandler(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
-
-        public async Task<RemoveRangeOrderCommandResponse> Handle(RemoveRangeOrderCommandRequest request, CancellationToken cancellationToken)
-        {
-            await _orderService.DeleteRangeOrderAsync(request.OrderIds);
-
-            return new();
-        }
+        public Task Handle(RemoveRangeOrderCommandRequest request, CancellationToken cancellationToken)
+            => orderService.DeleteRangeOrderAsync(
+                request.OrderIds,
+                cancellationToken);
     }
 }

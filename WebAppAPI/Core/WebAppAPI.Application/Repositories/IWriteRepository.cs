@@ -1,4 +1,5 @@
-﻿using WebAppAPI.Domain.Entities.Common;
+﻿using System.Linq.Expressions;
+using WebAppAPI.Domain.Entities.Common;
 
 namespace WebAppAPI.Application.Repositories
 {
@@ -6,9 +7,13 @@ namespace WebAppAPI.Application.Repositories
     {
         Task<bool> AddAsync(T model);
         Task<bool> AddRangeAsync(List<T> data);
+
+        bool Update(T model);
+
         bool Remove(T model);
         bool RemoveRange(List<T> data);
         Task<bool> RemoveAsync(Guid id);
-        bool Update(T model);
+
+        Task<int> ExecuteDeleteAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken);
     }
 }

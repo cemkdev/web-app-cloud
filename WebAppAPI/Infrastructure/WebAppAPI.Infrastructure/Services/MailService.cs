@@ -4,6 +4,7 @@ using System.Net.Mail;
 using System.Text;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Options.Client;
+using WebAppAPI.Application.Options.IdentityTokens;
 using WebAppAPI.Application.Options.Mail;
 using WebAppAPI.Domain.Enums;
 
@@ -12,11 +13,13 @@ namespace WebAppAPI.Infrastructure.Services
     public class MailService(
             IOptions<MailOptions> mailOptions,
             IOptions<EmailDisplayNameOptions> emailDisplayNameOptions,
-            IOptions<ClientOptions> clientOptions) : IMailService
+            IOptions<ClientOptions> clientOptions,
+            IOptions<IdentityTokenOptions> identityTokenOptions) : IMailService
     {
         private readonly MailOptions _mailOptions = mailOptions.Value;
         private readonly EmailDisplayNameOptions _emailDisplayNameOptions = emailDisplayNameOptions.Value;
         private readonly ClientOptions _clientOptions = clientOptions.Value;
+        private readonly IdentityTokenOptions _identityTokenOptions = identityTokenOptions.Value;
 
         public async Task SendMailAsync(string recipient, string subject, string body, bool isBodyHtml = true)
         {
@@ -63,9 +66,9 @@ namespace WebAppAPI.Infrastructure.Services
             {
                 OrderStatusEnum.Pending => "We've Received Your Order!",
                 OrderStatusEnum.Approved => "Your Order Has Been Approved!",
-                OrderStatusEnum.Shipping => "Good News! Your Order Is on the Way",
-                OrderStatusEnum.Delivered => "Your Order Has Been Delivered 🎉",
-                OrderStatusEnum.Cancelled => "Your Order Has Been Cancelled",
+                OrderStatusEnum.Shipping => "Good News! Your Order Is on the Way!",
+                OrderStatusEnum.Delivered => "Your Order Has Been Delivered! 🎉",
+                OrderStatusEnum.Cancelled => "Your Order Has Been Cancelled.",
                 _ => defaultSubject
             };
 
@@ -90,7 +93,7 @@ namespace WebAppAPI.Infrastructure.Services
                             </p>");
             sb.AppendLine("<p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>");
             sb.AppendLine($"<p><a href='{resetLink}'>{resetLink}</a></p>");
-            sb.AppendLine("<p>This link will expire in 30 minutes for your security.</p>");
+            sb.AppendLine($"<p>This link will expire in {_identityTokenOptions.LifetimeMinutes} minutes for your security.</p>");
             sb.AppendLine("<p>If you did not request a password reset, please ignore this email. Your current password will remain unchanged.</p>");
             sb.AppendLine("<br/>");
             sb.AppendLine($"<p>Best regards,<br/><strong>The {appName} Team</strong></p>");

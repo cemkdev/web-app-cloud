@@ -2,9 +2,9 @@
 
 namespace WebAppAPI.Application.Features.Orders.Commands.CreateOrder
 {
-    public class CreateOrderCommandRequest : IRequest<CreateOrderCommandResponse>
+    public sealed class CreateOrderCommandRequest : IRequest
     {
-        public string Description { get; set; }
-        public string Address { get; set; }
+        public required string Description { get; init; }
+        public required string Address { get; init; }
     }
 }

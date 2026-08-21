@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebAppAPI.Application.Features.Baskets.Queries.GetAllBasketItems;
+using WebAppAPI.Application.Features.Orders.Commands.CreateOrder;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Persistence.Contexts;
 using Entities = WebAppAPI.Domain.Entities;
@@ -14,6 +15,19 @@ namespace WebAppAPI.Persistence.Repositories
                 .FirstOrDefaultAsync(
                     basket => basket.UserId == userId && basket.Order == null,
                     cancellationToken);
+
+        public Task<ActiveBasketOrderData?> GetActiveBasketOrderDataAsync(string userId, CancellationToken cancellationToken)
+            => Query(tracking: false)
+                .Where(basket =>
+                    basket.UserId == userId &&
+                    basket.Order == null)
+                .Select(basket => new ActiveBasketOrderData
+                {
+                    BasketId = basket.Id,
+                    Recipient = basket.User.Email,
+                    FirstName = basket.User.FirstName
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
         public Task<List<BasketItemListDto>> GetItemsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken)
             => Query(false)

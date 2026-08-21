@@ -2,7 +2,9 @@
 using WebAppAPI.API.Options.Hosting;
 using WebAppAPI.Application.Options.Authentication;
 using WebAppAPI.Application.Options.Client;
+using WebAppAPI.Application.Options.IdentityTokens;
 using WebAppAPI.Application.Options.Mail;
+using WebAppAPI.Application.Options.Outbox;
 using WebAppAPI.Application.Options.Storage;
 
 namespace WebAppAPI.API.Extensions.ServiceCollection
@@ -25,6 +27,10 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
 
             services.AddOptions<TokenExpirationOptions>()
                 .Bind(configuration.GetSection(TokenExpirationOptions.SectionName))
+                .ValidateOnStart();
+
+            services.AddOptions<IdentityTokenOptions>()
+                .Bind(configuration.GetSection(IdentityTokenOptions.SectionName))
                 .ValidateOnStart();
 
             services.AddOptions<AuthCookieOptions>()
@@ -51,13 +57,19 @@ namespace WebAppAPI.API.Extensions.ServiceCollection
                 .Bind(configuration.GetSection(EmailDisplayNameOptions.SectionName))
                 .ValidateOnStart();
 
+            services.AddOptions<OutboxProcessorOptions>()
+                .Bind(configuration.GetSection(OutboxProcessorOptions.SectionName))
+                .ValidateOnStart();
+
             services.AddSingleton<IValidateOptions<ClientOptions>, ClientOptionsValidator>();
             services.AddSingleton<IValidateOptions<TokenOptions>, TokenOptionsValidator>();
             services.AddSingleton<IValidateOptions<TokenExpirationOptions>, TokenExpirationOptionsValidator>();
+            services.AddSingleton<IValidateOptions<IdentityTokenOptions>, IdentityTokenOptionsValidator>();
             services.AddSingleton<IValidateOptions<StorageOptions>, StorageOptionsValidator>();
             services.AddSingleton<IValidateOptions<BaseStorageOptions>, BaseStorageOptionsValidator>();
             services.AddSingleton<IValidateOptions<MailOptions>, MailOptionsValidator>();
             services.AddSingleton<IValidateOptions<ExternalLoginOptions>, ExternalLoginOptionsValidator>();
+            services.AddSingleton<IValidateOptions<OutboxProcessorOptions>, OutboxProcessorOptionsValidator>();
 
             return services;
         }

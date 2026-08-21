@@ -1,10 +1,11 @@
 ﻿using MediatR;
+using WebAppAPI.Domain.Enums;
 
 namespace WebAppAPI.Application.Features.Orders.Commands.UpdateStatus
 {
-    public class UpdateStatusCommandRequest : IRequest<UpdateStatusCommandResponse>
+    public sealed class UpdateStatusCommandRequest : IRequest
     {
-        public string OrderId { get; set; }
-        public int NewStatus { get; set; }
+        public required string OrderId { get; init; }
+        public OrderStatusEnum NewStatus { get; init; }
     }
 }

@@ -22,6 +22,7 @@ namespace WebAppAPI.Persistence.Services
         IWriteRepository<Product> productWriteRepository,
         IProductImageFileReadRepository productImageFileReadRepository,
         IWriteRepository<ProductImageFile> productImageFileWriteRepository,
+        IOrderItemSnapshotWriteRepository orderItemSnapshotWriteRepository,
         IStorageService storageService,
         IOptions<BaseStorageOptions> baseStorageOptions,
         IQRCodeService qrCodeService,
@@ -31,6 +32,7 @@ namespace WebAppAPI.Persistence.Services
         private readonly IWriteRepository<Product> _productWriteRepository = productWriteRepository;
         private readonly IProductImageFileReadRepository _productImageFileReadRepository = productImageFileReadRepository;
         private readonly IWriteRepository<ProductImageFile> _productImageFileWriteRepository = productImageFileWriteRepository;
+        private readonly IOrderItemSnapshotWriteRepository _orderItemSnapshotWriteRepository = orderItemSnapshotWriteRepository;
         private readonly IStorageService _storageService = storageService;
         private readonly BaseStorageOptions _baseStorageOptions = baseStorageOptions.Value;
         private readonly IQRCodeService _qrCodeService = qrCodeService;
@@ -41,10 +43,10 @@ namespace WebAppAPI.Persistence.Services
         public Task<GetAllProductsDto> GetAllProductsAsync(int page, int size, CancellationToken cancellationToken)
         {
             if (page < 0)
-                throw new ArgumentOutOfRangeException(nameof(page), page, "Page cannot be less than zero.");
+                throw new ArgumentOutOfRangeException(nameof(page), "Page cannot be less than zero.");
 
             if (size <= 0)
-                throw new ArgumentOutOfRangeException(nameof(size), size, "Size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than zero.");
 
             return _productReadRepository.GetPagedAsync(page, size, cancellationToken);
         }
@@ -296,27 +298,7 @@ namespace WebAppAPI.Persistence.Services
             if (!Guid.TryParse(id, out Guid productGuid))
                 throw new ArgumentException("Product id is not valid.", nameof(id));
 
-            Product? product = await _productReadRepository.GetByIdWithImagesAsync(productGuid, cancellationToken);
-
-            if (product is null)
-                throw new KeyNotFoundException("Product not found.");
-
-            List<ProductImageFile> productImages = product.ProductImageFiles.ToList();
-
-            if (productImages.Count > 0)
-                _productImageFileWriteRepository.RemoveRange(productImages);
-
-            _productWriteRepository.Remove(product);
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            foreach (ProductImageFile image in productImages)
-            {
-                await _storageService.DeleteAsync(
-                    ProductImagesStorageLocation,
-                    image.FileName,
-                    cancellationToken);
-            }
+            await DeleteProductsAsync([productGuid], cancellationToken);
         }
 
         public async Task RemoveRangeProductAsync(IEnumerable<string> productIds, CancellationToken cancellationToken)
@@ -339,22 +321,52 @@ namespace WebAppAPI.Persistence.Services
             if (productGuids.Count == 0)
                 throw new ArgumentException("At least one product must be selected for deletion.", nameof(productIds));
 
-            List<Product> products = await _productReadRepository.GetByIdsWithImagesAsync(productGuids, cancellationToken);
+            await DeleteProductsAsync(productGuids, cancellationToken);
+        }
 
-            if (products.Count != productGuids.Count)
-                throw new KeyNotFoundException("One or more products were not found.");
+        #region Helpers
+        private async Task DeleteProductsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+        {
+            List<ProductImageFile> productImages = [];
 
-            List<ProductImageFile> productImages = products
-                .SelectMany(product => product.ProductImageFiles)
-                .DistinctBy(image => image.Id)
-                .ToList();
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async transactionCancellationToken =>
+                {
+                    List<Product> products = await _productReadRepository.GetByIdsWithImagesAsync(
+                        productIds,
+                        transactionCancellationToken);
 
-            if (productImages.Count > 0)
-                _productImageFileWriteRepository.RemoveRange(productImages);
+                    if (products.Count != productIds.Count)
+                        throw new KeyNotFoundException("Product(s) not found.");
 
-            _productWriteRepository.RemoveRange(products);
+                    productImages = products
+                        .SelectMany(product => product.ProductImageFiles)
+                        .DistinctBy(image => image.Id)
+                        .ToList();
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    await _orderItemSnapshotWriteRepository.MarkProductsAsDeletedAsync(
+                        productIds,
+                        transactionCancellationToken);
+
+                    if (productImages.Count > 0)
+                    {
+                        Guid[] productImageIds = productImages
+                            .Select(image => image.Id)
+                            .ToArray();
+
+                        await _productImageFileWriteRepository.ExecuteDeleteAsync(
+                            image => productImageIds.Contains(image.Id),
+                            transactionCancellationToken);
+                    }
+
+                    int deletedProductCount = await _productWriteRepository.ExecuteDeleteAsync(
+                        product => productIds.Contains(product.Id),
+                        transactionCancellationToken);
+
+                    if (deletedProductCount != productIds.Count)
+                        throw new InvalidOperationException("Not all products could be deleted.");
+                },
+                cancellationToken);
 
             foreach (ProductImageFile image in productImages)
             {
@@ -364,5 +376,6 @@ namespace WebAppAPI.Persistence.Services
                     cancellationToken);
             }
         }
+        #endregion
     }
 }

@@ -15,6 +15,24 @@ services:
     volumes:
       - webapp-volume:/var/lib/postgresql/data
 
+  mailpit:
+    container_name: container_mailpit
+    image: axllent/mailpit:v1.30.6
+    restart: unless-stopped
+    profiles:
+      - light-observability
+      - full-observability
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - webapp-mailpit-volume:/data
+
   seq:
     container_name: container_seq
     image: datalust/seq:2025.2
@@ -89,6 +107,7 @@ services:
 
 volumes:
   webapp-volume:
+  webapp-mailpit-volume:
   webapp-seq-volume:
   webapp-elasticsearch-volume:
   webapp-prometheus-volume:

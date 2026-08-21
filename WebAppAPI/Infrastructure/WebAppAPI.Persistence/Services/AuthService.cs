@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Json;
+using WebAppAPI.Application.Abstractions.Messaging;
+using WebAppAPI.Application.Abstractions.Messaging.Messages;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Abstractions.Token;
 using WebAppAPI.Application.Exceptions;
@@ -11,6 +13,8 @@ using WebAppAPI.Application.Features.Auth.Commands.FacebookLogin.DTOs;
 using WebAppAPI.Application.Features.Auth.DTOs;
 using WebAppAPI.Application.Helpers;
 using WebAppAPI.Application.Options.Authentication;
+using WebAppAPI.Application.Options.IdentityTokens;
+using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities.Identity;
 
 namespace WebAppAPI.Persistence.Services
@@ -21,9 +25,11 @@ namespace WebAppAPI.Persistence.Services
         ITokenHandler tokenHandler,
         SignInManager<AppUser> signInManager,
         IPermissionService permissionService,
-        IMailService mailService,
+        IOutboxWriter outboxWriter,
+        IUnitOfWork unitOfWork,
         IHttpContextAccessor httpContextAccessor,
         IOptions<TokenExpirationOptions> tokenExpirationOptions,
+        IOptions<IdentityTokenOptions> identityTokenOptions,
         IOptions<AuthCookieOptions> authCookieOptions,
         IOptions<ExternalLoginOptions> externalLoginOptions) : IAuthService
     {
@@ -32,9 +38,11 @@ namespace WebAppAPI.Persistence.Services
         private readonly ITokenHandler _tokenHandler = tokenHandler;
         private readonly SignInManager<AppUser> _signInManager = signInManager;
         private readonly IPermissionService _permissionService = permissionService;
-        private readonly IMailService _mailService = mailService;
+        private readonly IOutboxWriter _outboxWriter = outboxWriter;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
         private readonly TokenExpirationOptions _tokenExpirationOptions = tokenExpirationOptions.Value;
+        private readonly IdentityTokenOptions _identityTokenOptions = identityTokenOptions.Value;
         private readonly AuthCookieOptions _authCookieOptions = authCookieOptions.Value;
         private readonly ExternalLoginOptions _externalLoginOptions = externalLoginOptions.Value;
 
@@ -237,25 +245,42 @@ namespace WebAppAPI.Persistence.Services
         #endregion
 
         #region PasswordReset
-        public async Task PasswordResetAsync(string email)
+        public async Task PasswordResetAsync(string email, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(email))
                 return;
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             AppUser? user = await _userManager.FindByEmailAsync(email);
 
             if (user is null)
                 return;
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             string resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
 
             resetToken = resetToken.UrlEncode();
 
-            await _mailService.SendPasswordResetMailAsync(
-                email,
-                user.Id,
-                user.FirstName,
-                resetToken);
+            PasswordResetMailMessage mailMessage = new()
+            {
+                Recipient = email,
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                ResetToken = resetToken
+            };
+
+            Guid requestId = Guid.NewGuid();
+
+            await _outboxWriter.EnqueueAsync(
+                OutboxMessageTypes.PasswordResetMail,
+                mailMessage,
+                $"{OutboxMessageTypes.PasswordResetMail}:{requestId}",
+                expiresAt: DateTime.UtcNow.AddMinutes(_identityTokenOptions.LifetimeMinutes),
+                cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<bool> VerifyResetTokenAsync(string resetToken, string userId)

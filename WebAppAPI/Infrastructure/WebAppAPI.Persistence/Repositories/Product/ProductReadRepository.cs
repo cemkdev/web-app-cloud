@@ -15,7 +15,7 @@ namespace WebAppAPI.Persistence.Repositories
     {
         public async Task<GetAllProductsDto> GetPagedAsync(int page, int size, CancellationToken cancellationToken)
         {
-            IQueryable<Entities.Product> query = Query(false);
+            IQueryable<Entities.Product> query = Query(tracking: false);
 
             int totalProductCount = await query.CountAsync(cancellationToken);
 

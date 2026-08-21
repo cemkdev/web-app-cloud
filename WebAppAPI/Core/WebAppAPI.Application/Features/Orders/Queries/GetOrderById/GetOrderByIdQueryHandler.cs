@@ -3,25 +3,18 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Orders.Queries.GetOrderById
 {
-    public class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQueryRequest, GetOrderByIdQueryResponse>
+    public sealed class GetOrderByIdQueryHandler(IOrderService orderService) : IRequestHandler<GetOrderByIdQueryRequest, GetOrderByIdQueryResponse>
     {
-        readonly IOrderService _orderService;
-
-        public GetOrderByIdQueryHandler(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
-
         public async Task<GetOrderByIdQueryResponse> Handle(GetOrderByIdQueryRequest request, CancellationToken cancellationToken)
         {
-            var order = await _orderService.GetOrderByIdAsync(request.Id);
+            GetOrderByIdDto order = await orderService.GetOrderByIdAsync(request.Id, cancellationToken);
 
-            return new()
+            return new GetOrderByIdQueryResponse
             {
                 Id = order.Id,
                 OrderCode = order.OrderCode,
-                Description = order.Description,
                 Address = order.Address,
+                Description = order.Description,
                 DateCreated = order.DateCreated,
                 StatusId = order.StatusId,
                 OrderBasketItems = order.OrderBasketItems

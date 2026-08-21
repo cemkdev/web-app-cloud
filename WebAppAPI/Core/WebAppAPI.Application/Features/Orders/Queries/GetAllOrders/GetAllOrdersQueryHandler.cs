@@ -3,23 +3,19 @@ using WebAppAPI.Application.Abstractions.Services;
 
 namespace WebAppAPI.Application.Features.Orders.Queries.GetAllOrders
 {
-    public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQueryRequest, GetAllOrdersQueryResponse>
+    public sealed class GetAllOrdersQueryHandler(IOrderService orderService) : IRequestHandler<GetAllOrdersQueryRequest, GetAllOrdersQueryResponse>
     {
-        readonly IOrderService _orderService;
-
-        public GetAllOrdersQueryHandler(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
-
         public async Task<GetAllOrdersQueryResponse> Handle(GetAllOrdersQueryRequest request, CancellationToken cancellationToken)
         {
-            var order_data = await _orderService.GetAllOrdersAsync(request.Page, request.Size);
+            GetAllOrdersDto result = await orderService.GetAllOrdersAsync(
+                request.Page,
+                request.Size,
+                cancellationToken);
 
-            return new()
+            return new GetAllOrdersQueryResponse
             {
-                TotalOrderCount = order_data.TotalOrderCount,
-                Orders = order_data.Orders
+                TotalOrderCount = result.TotalOrderCount,
+                Orders = result.Orders
             };
         }
     }

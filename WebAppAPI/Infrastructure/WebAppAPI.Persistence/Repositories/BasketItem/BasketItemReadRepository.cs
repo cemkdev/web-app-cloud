@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using WebAppAPI.Application.Features.Orders.Commands.CreateOrder;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Persistence.Contexts;
 using Entities = WebAppAPI.Domain.Entities;
@@ -33,15 +34,31 @@ namespace WebAppAPI.Persistence.Repositories
                         basketItem.BasketId == basketId,
                     cancellationToken);
 
+        public async Task<IReadOnlyList<CreateOrderBasketItemData>> GetOrderItemsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken)
+            => await Query(tracking: false)
+                .Where(basketItem => basketItem.BasketId == basketId)
+                .OrderBy(basketItem => basketItem.ProductId)
+                .Select(basketItem => new CreateOrderBasketItemData
+                {
+                    ProductId = basketItem.ProductId,
+                    Quantity = basketItem.Quantity
+                })
+                .ToListAsync(cancellationToken);
 
-
-
-        public Task<List<Entities.BasketItem>> GetByBasketIdAsync(Guid basketId, bool tracking = false)
-            => Query(tracking)
-                .Where(bi => bi.BasketId == basketId)
-                .ToListAsync();
-
-        public Task<bool> AnyByBasketIdAsync(Guid basketId)
-            => Query(false).AnyAsync(bi => bi.BasketId == basketId);
+        public async Task<IReadOnlyList<CreateOrderItemSnapshotData>> GetOrderItemSnapshotsByBasketIdAsync(Guid basketId, CancellationToken cancellationToken)
+            => await Query(tracking: false)
+                .Where(basketItem => basketItem.BasketId == basketId)
+                .OrderBy(basketItem => basketItem.ProductId)
+                .Select(basketItem => new CreateOrderItemSnapshotData
+                {
+                    ProductId = basketItem.ProductId,
+                    Name = basketItem.Product.Name,
+                    Title = basketItem.Product.Title,
+                    Description = basketItem.Product.Description,
+                    Rating = basketItem.Product.Rating,
+                    UnitPrice = basketItem.Product.Price,
+                    Quantity = basketItem.Quantity
+                })
+                .ToListAsync(cancellationToken);
     }
 }

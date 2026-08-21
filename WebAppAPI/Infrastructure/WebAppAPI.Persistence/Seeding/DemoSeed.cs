@@ -383,6 +383,52 @@ namespace WebAppAPI.Persistence.Seeding
             });
             await db.SaveChangesAsync();
 
+            // 6.6 ORDER ITEM SNAPSHOTS
+            Guid[] seededOrderIds = [o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11];
+
+            Dictionary<Guid, DateTime> orderCreatedDates = await db.Orders
+                .AsNoTracking()
+                .Where(order => seededOrderIds.Contains(order.Id))
+                .ToDictionaryAsync(
+                    order => order.Id,
+                    order => order.DateCreated);
+
+            List<BasketItem> seededBasketItems = await db.BasketItems
+                .AsNoTracking()
+                .Where(item => seededOrderIds.Contains(item.BasketId))
+                .ToListAsync();
+
+            Dictionary<Guid, Product> productsById =
+                products.ToDictionary(product => product.Id);
+
+            List<OrderItemSnapshot> orderItemSnapshots = seededBasketItems
+                .Select(item =>
+                {
+                    Product product = productsById[item.ProductId];
+                    DateTime orderCreatedDate = orderCreatedDates[item.BasketId];
+
+                    return WithCreatedAndUpdated(
+                        new OrderItemSnapshot
+                        {
+                            Id = Guid.NewGuid(),
+                            OrderId = item.BasketId,
+                            ProductId = item.ProductId,
+                            Name = product.Name,
+                            Title = product.Title,
+                            Description = product.Description,
+                            Rating = product.Rating,
+                            UnitPrice = product.Price,
+                            Quantity = item.Quantity,
+                            IsProductDeleted = false
+                        },
+                        orderCreatedDate,
+                        orderCreatedDate);
+                })
+                .ToList();
+
+            await db.OrderItemSnapshots.AddRangeAsync(orderItemSnapshots);
+            await db.SaveChangesAsync();
+
             // 7. MENUS (manuel seed)
             await db.Menus.AddRangeAsync(new[]
             {
@@ -409,12 +455,13 @@ namespace WebAppAPI.Persistence.Seeding
                 new Endpoint { Id=Guid.Parse("8a0c1d16-acb3-49d9-81eb-cbe667771457"), ActionType="Read",   HttpType="GET",    Definition = "Get Roles and Endpoints",        Code = "GET.Read.GetRolesandEndpoints",          AdminOnly=true,  Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")]},
                 new Endpoint { Id=Guid.Parse("46487cb5-8535-4614-8c6f-38c9700911bf"), ActionType="Write",  HttpType="POST",   Definition="Assign Roles to Endpoints",        Code="POST.Write.AssignRolestoEndpoints",        AdminOnly=true,  Menu = menusById[Guid.Parse("a771feb9-1524-4ba0-adc7-7b34c24149cb")] },
                 new Endpoint { Id=Guid.Parse("22fc12e2-48f2-4efd-beae-ce9584e6979e"), ActionType="Read",   HttpType="GET",    Definition="Get All Orders",                   Code="GET.Read.GetAllOrders",                    AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
-                new Endpoint { Id=Guid.Parse("94cc08dc-d762-4a3a-9160-fbf61e0209d6"), ActionType="Read",   HttpType="GET",    Definition="Get Order by Id",                  Code="GET.Read.GetOrderbyId",                    AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("94cc08dc-d762-4a3a-9160-fbf61e0209d6"), ActionType="Read",   HttpType="GET",    Definition="Get Order by Id",                  Code="GET.Read.GetOrderbyId",                    AdminOnly=true, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("7d455013-f55a-4394-8883-11b13d310ec4"), ActionType="Read",   HttpType="GET",    Definition="Get Order Customer by Id",         Code="GET.Read.GetOrderCustomerbyId",            AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("1cd9083d-07ba-402b-a4a0-a7528913b31d"), ActionType="Write",  HttpType="POST",   Definition="Create Order",                     Code="POST.Write.CreateOrder",                   AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("bedd1a37-43c5-4f20-b973-73e6f0b034a1"), ActionType="Delete", HttpType="DELETE", Definition="Delete Order",                     Code="DELETE.Delete.DeleteOrder",                AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("49c9b622-82bb-4ff0-bdea-777158180c17"), ActionType="Delete", HttpType="POST",   Definition="Delete Range of Order",            Code="POST.Delete.DeleteRangeofOrder",           AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("5638d377-c52e-4ea6-aa15-52f7ed3361d8"), ActionType="Update", HttpType="PUT",    Definition="Update Order Status",              Code="PUT.Update.UpdateOrderStatus",             AdminOnly=true,  Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
-                new Endpoint { Id=Guid.Parse("a9c8f7a4-a0aa-4564-b03d-1941838fdabb"), ActionType="Read",   HttpType="GET",    Definition="Get Order Status History by Id",   Code="GET.Read.GetOrderStatusHistorybyId",       AdminOnly=false, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
+                new Endpoint { Id=Guid.Parse("a9c8f7a4-a0aa-4564-b03d-1941838fdabb"), ActionType="Read",   HttpType="GET",    Definition="Get Order Status History by Id",   Code="GET.Read.GetOrderStatusHistorybyId",       AdminOnly=true, Menu = menusById[Guid.Parse("5029aaa1-f6ac-4161-aa8e-64da8cddd434")] },
                 new Endpoint { Id=Guid.Parse("c706e3f8-a117-49b0-9ab0-9fa478ad02fe"), ActionType="Read",   HttpType="GET",    Definition="Get Product By Id",                Code="GET.Read.GetProductById",                  AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
                 new Endpoint { Id=Guid.Parse("9093e984-c237-411f-bd39-6c644736bd56"), ActionType="Write",  HttpType="POST",   Definition="Create Product",                   Code="POST.Write.CreateProduct",                 AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
                 new Endpoint { Id=Guid.Parse("3a7de741-7b65-45c2-84af-37eb15900f4b"), ActionType="Update", HttpType="PUT",    Definition="Update Product",                   Code="PUT.Update.UpdateProduct",                 AdminOnly=true,  Menu = menusById[Guid.Parse("20b1cee6-d359-4358-a82e-46f602856e71")] },
@@ -462,6 +509,7 @@ namespace WebAppAPI.Persistence.Seeding
                 // Store Manager + System Administrator
                 ["GET.Read.GetAllOrders"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["GET.Read.GetOrderbyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
+                ["GET.Read.GetOrderCustomerbyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["POST.Write.CreateOrder"] = ["Customer", "StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["PUT.Update.UpdateOrderStatus"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],
                 ["GET.Read.GetOrderStatusHistorybyId"] = ["StoreManager", SystemBootstrapConstants.SystemAdministratorRoleName],

@@ -2,11 +2,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using WebAppAPI.Application.Abstractions.Messaging;
 using WebAppAPI.Application.Abstractions.Services;
 using WebAppAPI.Application.Abstractions.Services.Authentications;
+using WebAppAPI.Application.Options.IdentityTokens;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities.Identity;
 using WebAppAPI.Persistence.Contexts;
+using WebAppAPI.Persistence.Outbox;
 using WebAppAPI.Persistence.Repositories;
 using WebAppAPI.Persistence.Services;
 
@@ -34,15 +38,25 @@ namespace WebAppAPI.Persistence
             }).AddEntityFrameworkStores<WebAppAPIDbContext>()
             .AddDefaultTokenProviders(); // AddDefaultTokenProviders is required by UserManager.GeneratePasswordResetTokenAsync() in AuthService.
 
+            services.AddOptions<DataProtectionTokenProviderOptions>()
+                .Configure<IOptions<IdentityTokenOptions>>((options, identityTokenOptions) =>
+                {
+                    options.TokenLifespan = TimeSpan.FromMinutes(identityTokenOptions.Value.LifetimeMinutes);
+                });
+
             // Domain entity repositories
-            services.AddScoped<IOrderReadRepository, OrderReadRepository>();
-            services.AddScoped<IProductReadRepository, ProductReadRepository>();
-            services.AddScoped<IBasketReadRepository, BasketReadRepository>();
-            services.AddScoped<IBasketItemReadRepository, BasketItemReadRepository>();
-            services.AddScoped<IOrderStatusHistoryReadRepository, OrderStatusHistoryReadRepository>();
             services.AddScoped<IEndpointReadRepository, EndpointReadRepository>();
             services.AddScoped<IMenuReadRepository, MenuReadRepository>();
+            services.AddScoped<IProductReadRepository, ProductReadRepository>();
+            services.AddScoped<IProductWriteRepository, ProductWriteRepository>();
             services.AddScoped<IProductImageFileReadRepository, ProductImageFileReadRepository>();
+            services.AddScoped<IBasketItemReadRepository, BasketItemReadRepository>();
+            services.AddScoped<IBasketReadRepository, BasketReadRepository>();
+            services.AddScoped<IOrderReadRepository, OrderReadRepository>();
+            services.AddScoped<IOrderWriteRepository, OrderWriteRepository>();
+            services.AddScoped<IOrderItemSnapshotReadRepository, OrderItemSnapshotReadRepository>();
+            services.AddScoped<IOrderItemSnapshotWriteRepository, OrderItemSnapshotWriteRepository>();
+            services.AddScoped<IOrderStatusHistoryReadRepository, OrderStatusHistoryReadRepository>();
 
             // Authorization services
             services.AddScoped<IUserService, UserService>();
@@ -61,6 +75,10 @@ namespace WebAppAPI.Persistence
 
             // Product entity service
             services.AddScoped<IProductService, ProductService>();
+
+            // Outbox
+            services.AddScoped<IOutboxWriter, OutboxWriter>();
+            services.AddScoped<IOutboxStore, OutboxStore>();
         }
     }
 }

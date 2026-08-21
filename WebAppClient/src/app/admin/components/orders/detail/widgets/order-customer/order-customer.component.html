@@ -1,26 +1,28 @@
 <div class="widget order-customer">
     <div class="widget-header">
-        <span class="widget-title"><mat-icon>person</mat-icon> Customer Details</span>
+        <span class="widget-title">
+            <mat-icon>person</mat-icon> Customer Details
+        </span>
     </div>
 
-    <div class="widget-content">
+    <div class="widget-content" *ngIf="customer">
         <ul>
             <li>
                 <div class="inline-box">
-                    <img src="default-product-image.png">
+                    <img src="user-avatar.png" alt="Customer">
                     <ul>
-                        <li>Joseph Parkers</li>
+                        <li>{{ customer.fullName }}</li>
                         <li style="opacity: 0.7;">Customer</li>
                     </ul>
                 </div>
             </li>
             <li class="icon-text">
                 <mat-icon>email</mat-icon>
-                josephparker-gmail.com
+                {{ customer.email || '-' }}
             </li>
             <li class="icon-text">
                 <mat-icon>call</mat-icon>
-                +(256) 245 45 14
+                {{ formatPhoneNumber(customer.phoneNumber) }}
             </li>
         </ul>
     </div>

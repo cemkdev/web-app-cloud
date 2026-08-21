@@ -1,8 +1,8 @@
 ﻿namespace WebAppAPI.Application.Features.Orders.Queries.GetAllOrders
 {
-    public class GetAllOrdersQueryResponse
+    public sealed class GetAllOrdersQueryResponse
     {
-        public int TotalOrderCount { get; set; }
-        public object Orders { get; set; }
+        public required int TotalOrderCount { get; init; }
+        public required IReadOnlyList<OrderListItemDto> Orders { get; init; }
     }
 }

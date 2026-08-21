@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Linq.Expressions;
 using WebAppAPI.Application.Repositories;
 using WebAppAPI.Domain.Entities.Common;
 using WebAppAPI.Persistence.Contexts;
@@ -20,6 +21,12 @@ namespace WebAppAPI.Persistence.Repositories
         {
             await Set.AddRangeAsync(data);
             return true;
+        }
+
+        public bool Update(T model)
+        {
+            EntityEntry<T> entityEntry = Set.Update(model);
+            return entityEntry.State == EntityState.Modified;
         }
 
         public bool Remove(T model)
@@ -43,10 +50,9 @@ namespace WebAppAPI.Persistence.Repositories
             return Remove(model);
         }
 
-        public bool Update(T model)
-        {
-            EntityEntry<T> entityEntry = Set.Update(model);
-            return entityEntry.State == EntityState.Modified;
-        }
+        public Task<int> ExecuteDeleteAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken)
+            => Set
+                .Where(predicate)
+                .ExecuteDeleteAsync(cancellationToken);
     }
 }

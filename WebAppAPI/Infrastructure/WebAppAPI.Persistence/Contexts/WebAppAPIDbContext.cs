@@ -4,6 +4,7 @@ using WebAppAPI.Domain.Entities;
 using WebAppAPI.Domain.Entities.Common;
 using WebAppAPI.Domain.Entities.Identity;
 using WebAppAPI.Domain.Enums;
+using WebAppAPI.Persistence.Outbox;
 
 namespace WebAppAPI.Persistence.Contexts
 {
@@ -27,6 +28,8 @@ namespace WebAppAPI.Persistence.Contexts
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
         public DbSet<Menu> Menus { get; set; }
         public DbSet<Endpoint> Endpoints { get; set; }
+        public DbSet<OutboxMessage> OutboxMessages { get; set; }
+        public DbSet<OrderItemSnapshot> OrderItemSnapshots { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -71,6 +74,25 @@ namespace WebAppAPI.Persistence.Contexts
                 .WithMany()
                 .HasForeignKey(h => h.NewStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<OutboxMessage>()
+                .HasIndex(message => message.DeduplicationKey)
+                .IsUnique();
+
+            builder.Entity<OutboxMessage>()
+                .HasIndex(message => new
+                {
+                    message.Status,
+                    message.NextAttemptAt
+                });
+
+            builder.Entity<OrderItemSnapshot>()
+                .HasIndex(snapshot => new
+                {
+                    snapshot.OrderId,
+                    snapshot.ProductId
+                })
+                .IsUnique();
 
             base.OnModelCreating(builder);
         }

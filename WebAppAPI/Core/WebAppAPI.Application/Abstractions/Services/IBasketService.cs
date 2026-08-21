@@ -10,6 +10,5 @@ namespace WebAppAPI.Application.Abstractions.Services
         Task AddItemToBasketAsync(AddBasketItemDto basketItem, CancellationToken cancellationToken);
         Task UpdateQuantityAsync(BasketItemQuantityUpdateDto basketItem, CancellationToken cancellationToken);
         Task RemoveBasketItemAsync(string basketItemId, CancellationToken cancellationToken);
-        Task<Guid?> GetActiveBasketIdAsync(CancellationToken cancellationToken);
     }
 }
